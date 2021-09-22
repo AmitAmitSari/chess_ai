@@ -1,4 +1,4 @@
-use crate::two_player_game::{Game, Scored};
+use crate::two_player_game::{Game};
 use crate::alpha_beta::get_next_move;
 use crate::two_player_game::GameState::PLAYING;
 
@@ -15,7 +15,7 @@ fn main() {
     while xo.game_state() == PLAYING {
         let m = get_next_move(&mut xo);
         //println!("{:?}", m);
-        xo.do_move(&m);
+        xo.do_move(&m.unwrap());
         println!();
         xo.console_draw();
         //println!("{:?}", xo.get_score());

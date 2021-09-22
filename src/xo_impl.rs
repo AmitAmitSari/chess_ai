@@ -43,6 +43,7 @@ impl Game for Xo {
 
     fn possible_moves(&self) -> Vec<usize> {
         let mut possible: Vec<usize> = vec![];
+        possible.reserve(9);
         for i in 0..9 {
             if self.state[i] == Square::E {
                 possible.push(i);
@@ -66,7 +67,7 @@ impl Game for Xo {
     }
 
     fn game_state(&self) -> GameState {
-        let mut xo_to_12: HashMap<Square, GameState> = [
+        let xo_to_12: HashMap<Square, GameState> = [
             (Square::X, PLAYER1WIN),
             (Square::O, PLAYER2WIN)
         ]

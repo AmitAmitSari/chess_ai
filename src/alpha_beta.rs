@@ -1,15 +1,13 @@
-use crate::two_player_game::{Game, Player};
+use crate::two_player_game::Game;
 use crate::two_player_game::Scored;
 use crate::two_player_game::GameState::PLAYING;
 use crate::two_player_game::Player::PLAYER1;
 use std::cmp::{max, min};
 
-pub fn get_next_move<Y>(game: &mut Y) -> Y::T
+pub fn get_next_move<Y>(game: &mut Y) -> Option<Y::T>
     where Y: Game + Scored
 {
-    let best_move = min_max(game, 100);
-
-    best_move.0.unwrap()
+    min_max(game, 100).0
 }
 
 fn min_max<Y>(game: &mut Y, depth: i32) -> (Option<<Y as Game>::T>, Y::ScoreType)
@@ -27,14 +25,7 @@ fn min_max<Y>(game: &mut Y, depth: i32) -> (Option<<Y as Game>::T>, Y::ScoreType
         game.do_move(&m);
 
         let move_score = min_max(game, depth - 1).1;
-        // if depth == 100 {
-        //     game.console_draw();
-        //     println!("move score: {:?}, score: {:?}, func {:?}", move_score, score, func);
-        // }
         if func(score, move_score) != score {
-            // if depth == 100 {
-            //     println!("diff");
-            // }
             best_move = Some(m);
         }
         score = func(score, move_score);
