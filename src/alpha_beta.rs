@@ -22,15 +22,14 @@ fn min_max<Y>(game: &mut Y, depth: i32) -> (Option<<Y as Game>::T>, Y::ScoreType
     let mut best_move: Option<<Y as Game>::T> = None;
 
     for m in game.possible_moves() {
-        game.do_move(&m);
-
+        game.do_move(m);
         let move_score = min_max(game, depth - 1).1;
+        let m_ = game.undo_move();
+
         if func(score, move_score) != score {
-            best_move = Some(m);
+            best_move = Some(m_);
         }
         score = func(score, move_score);
-
-        game.undo_move();
     }
 
     return (best_move, score);

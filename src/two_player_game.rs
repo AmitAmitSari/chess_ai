@@ -6,6 +6,14 @@ pub enum Player { PLAYER1 = 0, PLAYER2 = 1 }
 #[derive(Eq, PartialEq, Clone, Copy)]
 pub enum GameState { PLAYER1WIN, PLAYER2WIN, TIE, PLAYING}
 
+impl Player {
+    pub fn other(&self) -> Player {
+        match *self {
+            Player::PLAYER1 => Player::PLAYER2,
+            Player::PLAYER2 => Player::PLAYER1
+        }
+    }
+}
 
 pub trait Game {
     type T;
@@ -15,11 +23,11 @@ pub trait Game {
     // Return a vector of possible moves.
     fn possible_moves(&self) -> Vec<Self::T>;
 
-    // Mutate the board state doing the move 'play'
-    fn do_move(&mut self, play: &Self::T);
+    // Mutate the Board state doing the move 'play'
+    fn do_move(&mut self, play: Self::T);
 
     // Undo the last move.
-    fn undo_move(&mut self);
+    fn undo_move(&mut self) -> Self::T;
 
     // Return
     fn game_state(&self) -> GameState;

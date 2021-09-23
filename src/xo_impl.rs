@@ -52,18 +52,17 @@ impl Game for Xo {
         possible
     }
 
-    fn do_move(&mut self, play: &usize) {
-        self.state[*play] = self.cur_player;
+    fn do_move(&mut self, play: usize) {
+        self.state[play] = self.cur_player;
         self.flip_player();
-        self.history.push(*play);
+        self.history.push(play);
     }
 
-    fn undo_move(&mut self) {
-        let last = self.history.pop();
-        if last.is_some() {
-            self.state[last.unwrap()] = Square::E;
-            self.flip_player();
-        }
+    fn undo_move(&mut self) -> usize {
+        let last = self.history.pop().unwrap();
+        self.state[last] = Square::E;
+        self.flip_player();
+        last
     }
 
     fn game_state(&self) -> GameState {
