@@ -1,6 +1,6 @@
 use crate::two_player_game::{Game, Player, GameState};
-use std::ops::{Index, IndexMut};
-use crate::bit_help::{place, index, place_to_coord, coord_to_index};
+use crate::bit_help::{place, place_to_coord, coord_to_index};
+use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 
 #[derive(Copy, Clone)]
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
@@ -24,11 +24,18 @@ impl BoardState {
     }
 
     fn move_piece(&mut self, player: Player, piece_type: PieceType, from: u64, to: u64) {
-        let mut piece_state = self.get_mut(player, piece_type);
+        let piece_state = self.get_mut(player, piece_type);
         *piece_state &= !from;
         *piece_state |= to;
     }
 
+    fn all_occupancy(&self) -> u64 {
+        return self.occupancy(PLAYER1) | self.occupancy(PLAYER2);
+    }
+
+    fn occupancy(&self, player: Player) -> u64 {
+        self.piece_state[player as usize].iter().cloned().reduce(|a, b| a | b).unwrap()
+    }
 }
 
 pub struct Move {
@@ -55,7 +62,20 @@ pub struct Move {
 pub struct Chess {
     current_player: Player,
     board: BoardState,
-    history: Vec<Move>
+    history: Vec<(Move, u64, u64)>
+}
+
+impl Chess {
+    pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
+        let (from_index, to_index): (i32, i32) = match king_end_location {
+            x if x == place(2) => (0, 3),
+            x if x == place(6) => (7, 5),
+            x if x == place(62) => (63, 61),
+            x if x == place(58) => (56, 59),
+            _ => { panic!("Tried to castle to an invalid location!") }
+        };
+        (place(from_index), place(to_index))
+    }
 }
 
 impl Game for Chess {
@@ -66,7 +86,11 @@ impl Game for Chess {
     }
 
     fn possible_moves(&self) -> Vec<Self::T> {
-        todo!()
+        let mut possible_moves = vec![];
+        possible_moves.reserve(40);
+
+
+        possible_moves
     }
 
     fn do_move(&mut self, play: Self::T) {
@@ -78,14 +102,8 @@ impl Game for Chess {
 
         // Castle
         if play.castle_flag {
-            let (from_index, to_index): (i32, i32) = match play.to {
-                x if x == place(2) => (0, 3),
-                x if x == place(6) => (7, 5),
-                x if x == place(62) => (63, 61),
-                x if x == place(58) => (56, 59),
-                _ => {panic!("Tried to castle to an invalid location!")}
-            };
-            self.board.move_piece(play.moving_player, PieceType::ROOK, place(from_index), place(to_index));
+            let (from_index, to_index) = Chess::castle_rook_move(play.to);
+            self.board.move_piece(play.moving_player, PieceType::ROOK, from_index, to_index);
         }
 
         // En passant
@@ -100,11 +118,28 @@ impl Game for Chess {
         self.board.castle_memory = play.castle_memory;
         self.current_player = play.moving_player.other();
 
-        self.history.push(play)
+        self.history.push((play, self.board.castle_memory, self.board.en_passant_square));
     }
 
     fn undo_move(&mut self) -> Self::T {
-        todo!()
+        let (play, castle_memory, en_passant_square) = self.history.pop().unwrap();
+
+        *self.board.get_mut(play.moving_player, play.end_type) &= !play.to;
+        *self.board.get_mut(play.moving_player, play.start_type) |= play.from;
+
+        *self.board.get_mut(play.moving_player.other(), play.eaten_type) |= play.eaten_loc;
+
+        // Castle
+        if play.castle_flag {
+            let (from_index, to_index) = Chess::castle_rook_move(play.to);
+            self.board.move_piece(play.moving_player, PieceType::ROOK, to_index, from_index);
+        }
+
+        self.board.castle_memory = castle_memory;
+        self.board.en_passant_square = en_passant_square;
+        self.current_player = play.moving_player.other();
+
+        play
     }
 
     fn game_state(&self) -> GameState {
