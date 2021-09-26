@@ -24,218 +24,51 @@ pub fn place_to_coord(place: u64) -> (i32, i32) {
     return index_to_coord(index(place));
 }
 
-
-// These where generated such that for each square - multiplying the blockerboard with the magic for that square gives a unique set of the most significant X bits.
-const _ROOK_MAGICS: [u64; 64] = [
-    0xa8002c000108020_u64, 0x6c00049b0002001_u64, 0x100200010090040_u64, 0x2480041000800801_u64, 0x280028004000800_u64,
-    0x900410008040022_u64, 0x280020001001080_u64, 0x2880002041000080_u64, 0xa000800080400034_u64, 0x4808020004000_u64,
-    0x2290802004801000_u64, 0x411000d00100020_u64, 0x402800800040080_u64, 0xb000401004208_u64, 0x2409000100040200_u64,
-    0x1002100004082_u64, 0x22878001e24000_u64, 0x1090810021004010_u64, 0x801030040200012_u64, 0x500808008001000_u64,
-    0xa08018014000880_u64, 0x8000808004000200_u64, 0x201008080010200_u64, 0x801020000441091_u64, 0x800080204005_u64,
-    0x1040200040100048_u64, 0x120200402082_u64, 0xd14880480100080_u64, 0x12040280080080_u64, 0x100040080020080_u64,
-    0x9020010080800200_u64, 0x813241200148449_u64, 0x491604001800080_u64, 0x100401000402001_u64, 0x4820010021001040_u64,
-    0x400402202000812_u64, 0x209009005000802_u64, 0x810800601800400_u64, 0x4301083214000150_u64, 0x204026458e001401_u64,
-    0x40204000808000_u64, 0x8001008040010020_u64, 0x8410820820420010_u64, 0x1003001000090020_u64, 0x804040008008080_u64,
-    0x12000810020004_u64, 0x1000100200040208_u64, 0x430000a044020001_u64, 0x280009023410300_u64, 0xe0100040002240_u64,
-    0x200100401700_u64, 0x2244100408008080_u64, 0x8000400801980_u64, 0x2000810040200_u64, 0x8010100228810400_u64,
-    0x2000009044210200_u64, 0x4080008040102101_u64, 0x40002080411d01_u64, 0x2005524060000901_u64, 0x502001008400422_u64,
-    0x489a000810200402_u64, 0x1004400080a13_u64, 0x4000011008020084_u64, 0x26002114058042_u64
-];
-
-const _BISHOP_MAGICS: [u64; 64] = [
-    0x89a1121896040240_u64, 0x2004844802002010_u64, 0x2068080051921000_u64, 0x62880a0220200808_u64, 0x4042004000000_u64,
-    0x100822020200011_u64, 0xc00444222012000a_u64, 0x28808801216001_u64, 0x400492088408100_u64, 0x201c401040c0084_u64,
-    0x840800910a0010_u64, 0x82080240060_u64, 0x2000840504006000_u64, 0x30010c4108405004_u64, 0x1008005410080802_u64,
-    0x8144042209100900_u64, 0x208081020014400_u64, 0x4800201208ca00_u64, 0xf18140408012008_u64, 0x1004002802102001_u64,
-    0x841000820080811_u64, 0x40200200a42008_u64, 0x800054042000_u64, 0x88010400410c9000_u64, 0x520040470104290_u64,
-    0x1004040051500081_u64, 0x2002081833080021_u64, 0x400c00c010142_u64, 0x941408200c002000_u64, 0x658810000806011_u64,
-    0x188071040440a00_u64, 0x4800404002011c00_u64, 0x104442040404200_u64, 0x511080202091021_u64, 0x4022401120400_u64,
-    0x80c0040400080120_u64, 0x8040010040820802_u64, 0x480810700020090_u64, 0x102008e00040242_u64, 0x809005202050100_u64,
-    0x8002024220104080_u64, 0x431008804142000_u64, 0x19001802081400_u64, 0x200014208040080_u64, 0x3308082008200100_u64,
-    0x41010500040c020_u64, 0x4012020c04210308_u64, 0x208220a202004080_u64, 0x111040120082000_u64, 0x6803040141280a00_u64,
-    0x2101004202410000_u64, 0x8200000041108022_u64, 0x21082088000_u64, 0x2410204010040_u64, 0x40100400809000_u64,
-    0x822088220820214_u64, 0x40808090012004_u64, 0x910224040218c9_u64, 0x402814422015008_u64, 0x90014004842410_u64,
-    0x1000042304105_u64, 0x10008830412a00_u64, 0x2520081090008908_u64, 0x40102000a0a60140_u64,
-];
-
-// The number of bits needed to save all options for blockers in this square.
-const _ROOK_INDEX_BITS: [i32; 64] = [
-    12, 11, 11, 11, 11, 11, 11, 12,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    12, 11, 11, 11, 11, 11, 11, 12
-];
-
-const _BISHOP_INDEX_BITS: [i32; 64] = [
-    6, 5, 5, 5, 5, 5, 5, 6,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    6, 5, 5, 5, 5, 5, 5, 6
-];
-
-struct MoveTables {
-
-    // All move location for each square - not including board edge
-    bishop_masks: [u64; 64],
-    rook_masks: [u64; 64],
-
-    // Map from key to moveboard for each square
-    bishop_table: [[u64; 1024]; 64],
-    rook_table: [[u64; 4096]; 64]
+pub fn ray(index: i32, dir: Dir) -> u64 {
+    let start = place(index);
+    let (n, e, w, s) = (
+        (index / 8) - 1,
+        7 - (index / 8),
+        (index % 8) - 1,
+        7 - (index % 8)
+    );
+    match dir {
+        Dir::North => _ray(start, n, |x| x >> 8),
+        Dir::South => _ray(start, e, |x| x << 8),
+        Dir::East => _ray(start, w, |x| x >> 1),
+        Dir::West => _ray(start, s, |x| x << 1),
+        Dir::NorthEast => _ray(start, min(n, e), |x| x >> 7),
+        Dir::NorthWest => _ray(start, min(n, w), |x| x >> 9),
+        Dir::SouthEast => _ray(start, min(s, e), |x| x << 9),
+        Dir::SouthWest => _ray(start, min(s, w), |x| x << 7),
+    }
 }
 
-impl MoveTables {
+fn _ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
+    let mut ray = 0_u64;
+    for _ in 0..cnt {
+        start = func(start);
+        ray |= start;
+    }
+    ray
+}
 
-    fn new() -> MoveTables {
-        let mut m = MoveTables {
-            bishop_masks: [0; 64],
-            rook_masks: [0; 64],
-            bishop_table: [[0; 1024]; 64],
-            rook_table: [[0; 4096]; 64],
+pub fn ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
+    let mut res = ray(index, dir);
+    if res & blockers != 0 {
+        let first_blocker_index = match dir {
+            Dir::NorthEast |
+            Dir::NorthWest |
+            Dir::North |
+            Dir::West => 63 - (res & blockers).leading_zeros(),
+            Dir::SouthEast |
+            Dir::SouthWest |
+            Dir::South |
+            Dir::East => (res & blockers).trailing_zeros(),
         };
-        m.init();
-        m
+        res &= !(ray(first_blocker_index as i32, dir))
     }
-
-    fn init(&mut self) {
-        self.init_bishop_masks();
-        self.init_rook_masks();
-        self.init_bishop_tables();
-        self.init_rook_tables();
-    }
-
-    fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
-        let key = ((blockers & self.bishop_masks[index]) * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
-        self.bishop_table[index][key as usize]
-    }
-    fn get_rook_moves(&self, index: usize, blockers: u64) -> u64 {
-        let key = ((blockers & self.rook_masks[index]) * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
-        self.rook_table[index][key as usize]
-    }
-
-    fn ray(index: i32, dir: Dir) -> u64 {
-        let start = place(index);
-        let (n, e, w, s) = (
-            (index / 8) - 1,
-            7 - (index / 8),
-            (index % 8) - 1,
-            7 - (index % 8)
-        );
-        match dir {
-            Dir::North => MoveTables::_ray(start, n, |x| x >> 8),
-            Dir::South => MoveTables::_ray(start, e, |x| x << 8),
-            Dir::East => MoveTables::_ray(start, w, |x| x >> 1),
-            Dir::West => MoveTables::_ray(start, s, |x| x << 1),
-            Dir::NorthEast => MoveTables::_ray(start, min(n, e), |x| x >> 7),
-            Dir::NorthWest => MoveTables::_ray(start, min(n, w), |x| x >> 9),
-            Dir::SouthEast => MoveTables::_ray(start, min(s, e), |x| x << 9),
-            Dir::SouthWest => MoveTables::_ray(start, min(s, w), |x| x << 7),
-        }
-    }
-
-    fn _ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
-        let mut ray = 0_u64;
-        for _ in 0..cnt {
-            start = func(start);
-            ray |= start;
-        }
-        ray
-    }
-
-    fn create_blockers_from_index(index: i32, mut mask: u64) -> u64 {
-        let mut blockers: u64 = 0;
-        let bits = mask.count_ones();
-        for i in 0..bits {
-            let bit_pos = mask.trailing_zeros();
-            mask ^= mask & (!mask + 1);
-            if (index & (1 << i)) != 0 {
-                blockers |= 1_u64 << bit_pos
-            }
-        }
-        blockers
-    }
-
-    fn init_bishop_masks(&mut self) {
-        for index in 0_i32..64 {
-            self.bishop_masks[index as usize] |= MoveTables::ray(index, Dir::NorthEast);
-            self.bishop_masks[index as usize] |= MoveTables::ray(index, Dir::NorthWest);
-            self.bishop_masks[index as usize] |= MoveTables::ray(index, Dir::SouthEast);
-            self.bishop_masks[index as usize] |= MoveTables::ray(index, Dir::SouthWest);
-        }
-    }
-
-    fn init_rook_masks(&mut self) {
-        for index in 0_i32..64 {
-            self.rook_masks[index as usize] |= MoveTables::ray(index, Dir::North);
-            self.rook_masks[index as usize] |= MoveTables::ray(index, Dir::East);
-            self.rook_masks[index as usize] |= MoveTables::ray(index, Dir::West);
-            self.rook_masks[index as usize] |= MoveTables::ray(index, Dir::South);
-        }
-    }
-
-    fn init_bishop_tables(&mut self) {
-        for index in 0..64 {
-            let blockers = MoveTables::create_blockers_from_index(index as i32, self.bishop_masks[index]);
-            let key = (blockers * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
-            self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
-        }
-    }
-
-    fn init_rook_tables(&mut self) {
-        for index in 0..64 {
-            let blockers = MoveTables::create_blockers_from_index(index as i32, self.rook_masks[index]);
-            let key = (blockers * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
-            self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
-        }
-    }
-
-    fn _ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
-        let mut res = MoveTables::ray(index, dir);
-        if res & blockers != 0 {
-            let first_blocker_index = match dir {
-                Dir::NorthEast |
-                Dir::NorthWest |
-                Dir::North |
-                Dir::West => 63 - (res & blockers).leading_zeros(),
-                Dir::SouthEast |
-                Dir::SouthWest |
-                Dir::South |
-                Dir::East => (res & blockers).trailing_zeros(),
-            };
-            res &= !(MoveTables::ray(first_blocker_index as i32, dir))
-        }
-        res
-    }
-
-    fn _bishop_moves_slow(index: i32, blockers: u64) -> u64 {
-        let mut res = 0_u64;
-
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::NorthWest);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::NorthEast);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::SouthWest);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::SouthEast);
-
-        res
-    }
-
-    fn _rook_moves_slow(index: i32, blockers: u64) -> u64 {
-        let mut res = 0_u64;
-
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::North);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::South);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::East);
-        res |= MoveTables::_ray_until_blocker(index, blockers, Dir::West);
-
-        res
-    }
+    res
 }
 
 

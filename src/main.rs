@@ -7,6 +7,7 @@ mod alpha_beta;
 mod xo_impl;
 mod chess_impl;
 mod bit_help;
+mod move_generation;
 
 
 fn main() {
