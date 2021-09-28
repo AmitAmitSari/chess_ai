@@ -1,9 +1,30 @@
 use crate::two_player_game::{Game, Player, GameState};
-use crate::bit_help::{place, place_to_coord, coord_to_index};
+use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 
 #[derive(Copy, Clone)]
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
+
+impl Player {
+    fn dir(&self, dir: Dir) -> Dir {
+        match *self {
+            PLAYER2 => dir,
+            PLAYER1 => {
+                match dir {
+                    Dir::North => Dir::South,
+                    Dir::South => Dir::North,
+                    Dir::East => Dir::West,
+                    Dir::West => Dir::East,
+                    Dir::NorthEast => Dir::NorthWest,
+                    Dir::NorthWest => Dir::SouthEast,
+                    Dir::SouthEast => Dir::NorthWest,
+                    Dir::SouthWest => Dir::NorthEast
+                }
+            }
+        }
+    }
+}
+
 
 // White is on top.
 // The least significant bit is top left. going over the board rows first.
@@ -68,13 +89,13 @@ pub struct Chess {
 impl Chess {
     pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
         let (from_index, to_index): (i32, i32) = match king_end_location {
-            x if x == place(2) => (0, 3),
-            x if x == place(6) => (7, 5),
-            x if x == place(62) => (63, 61),
-            x if x == place(58) => (56, 59),
+            x if x == index_to_place(2) => (0, 3),
+            x if x == index_to_place(6) => (7, 5),
+            x if x == index_to_place(62) => (63, 61),
+            x if x == index_to_place(58) => (56, 59),
             _ => { panic!("Tried to castle to an invalid location!") }
         };
-        (place(from_index), place(to_index))
+        (index_to_place(from_index), index_to_place(to_index))
     }
 }
 
@@ -110,7 +131,7 @@ impl Game for Chess {
         if play.en_passant_flag {
             let (from_x, from_y) = place_to_coord(play.from);
             let (_, to_y) = place_to_coord(play.to);
-            self.board.en_passant_square = place(coord_to_index((from_x, (from_y + to_y) / 2)));
+            self.board.en_passant_square = index_to_place(coord_to_index((from_x, (from_y + to_y) / 2)));
         } else {
             self.board.en_passant_square = 0;
         }

@@ -3,8 +3,27 @@ use std::cmp::min;
 #[derive(Clone, Copy)]
 pub enum Dir {North, South, East, West, NorthEast, NorthWest, SouthEast, SouthWest}
 
+impl Dir {
+    pub fn mv(&self, place: u64) -> Option<u64> {
+        let (x, y) = place_to_coord(place);
+        let (dx, dy) = match *self {
+            Dir::North => (x, y - 1),
+            Dir::South => (x, y + 1),
+            Dir::East => (x + 1, y),
+            Dir::West => (x - 1, y),
+            Dir::NorthEast => (x + 1, y - 1),
+            Dir::NorthWest => (x - 1, y - 1),
+            Dir::SouthEast => (x + 1, y + 1),
+            Dir::SouthWest => (x - 1, y + 1)
+        };
+        if 0 <= x && x < 7 && 0 <= y && y < 7 {
+            return Some(index_to_place(coord_to_index((dx, dy))));
+        }
+        return None;
+    }
+}
 
-pub fn place(index: i32) -> u64 {
+pub fn index_to_place(index: i32) -> u64 {
     return 1_u64 << index;
 }
 
@@ -25,7 +44,7 @@ pub fn place_to_coord(place: u64) -> (i32, i32) {
 }
 
 pub fn ray(index: i32, dir: Dir) -> u64 {
-    let start = place(index);
+    let start = index_to_place(index);
     let (n, e, w, s) = (
         (index / 8) - 1,
         7 - (index / 8),
@@ -85,7 +104,7 @@ impl X {
 
 #[cfg(test)]
 mod tests {
-    use crate::bit_help::{X, place};
+    use crate::bit_help::{X, index_to_place};
 
 
     #[test]
@@ -98,7 +117,7 @@ mod tests {
     #[test]
     fn test_place() {
         for i in 0..64 {
-            assert_eq!(place(i), 2_u64.pow(i as u32));
+            assert_eq!(index_to_place(i), 2_u64.pow(i as u32));
         }
     }
 

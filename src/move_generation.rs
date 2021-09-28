@@ -1,4 +1,4 @@
-use crate::bit_help::{Dir, ray, ray_until_blocker};
+use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place};
 
 // These where generated such that for each square - multiplying the blockerboard with the magic for that square gives a unique set of the most significant X bits.
 const _ROOK_MAGICS: [u64; 64] = [
@@ -65,7 +65,13 @@ struct MoveTables {
 
     // Map from key to moveboard for each square
     bishop_table: [[u64; 1024]; 64],
-    rook_table: [[u64; 4096]; 64]
+    rook_table: [[u64; 4096]; 64],
+
+    // Non sliding piece masks
+    knight_masks: [u64; 64],
+    king_masks: [u64; 64],
+    // pawn_moves_masks: [u64; 64],
+    // pawn_captures_masks: [u64; 64],
 }
 
 
@@ -77,6 +83,10 @@ impl MoveTables {
             rook_masks: [0; 64],
             bishop_table: [[0; 1024]; 64],
             rook_table: [[0; 4096]; 64],
+            knight_masks: [0; 64],
+            king_masks: [0; 64],
+            // pawn_moves_masks: [0; 64],
+            // pawn_captures_masks: [0; 64],
         };
         m.init();
         m
@@ -87,15 +97,26 @@ impl MoveTables {
         self.init_rook_masks();
         self.init_bishop_tables();
         self.init_rook_tables();
+
+        self.init_knight_masks();
     }
 
     fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
         let key = ((blockers & self.bishop_masks[index]) * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
         self.bishop_table[index][key as usize]
     }
+
     fn get_rook_moves(&self, index: usize, blockers: u64) -> u64 {
         let key = ((blockers & self.rook_masks[index]) * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
         self.rook_table[index][key as usize]
+    }
+
+    fn get_pawn_moves(&self, index: usize, blockers: u64) -> u64 {
+        todo!();
+    }
+
+    fn get_knight_moves(&self, index: usize) -> u64 {
+        self.knight_masks[index]
     }
 
     fn create_blockers_from_index(index: i32, mut mask: u64) -> u64 {
@@ -145,7 +166,19 @@ impl MoveTables {
         }
     }
 
-
+    fn init_knight_masks(&mut self) {
+        for index in 0..64 {
+            for dir in [Dir::North, Dir::South, Dir::East, Dir::West].iter() {
+                if let Some(adj) = dir.mv(index_to_place(index)) {
+                    for diag_dir in [Dir::NorthEast, Dir::NorthWest, Dir::SouthEast, Dir::SouthWest].iter() {
+                        if let Some(final_move) = diag_dir.mv(adj) {
+                            self.knight_masks[index as usize] |= final_move;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fn _bishop_moves_slow(index: i32, blockers: u64) -> u64 {
         let mut res = 0_u64;
