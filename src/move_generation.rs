@@ -1,4 +1,6 @@
 use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place};
+use crate::two_player_game::Player::{PLAYER1, PLAYER2};
+use crate::two_player_game::Player;
 
 // These where generated such that for each square - multiplying the blockerboard with the magic for that square gives a unique set of the most significant X bits.
 const _ROOK_MAGICS: [u64; 64] = [
@@ -69,9 +71,7 @@ struct MoveTables {
 
     // Non sliding piece masks
     knight_masks: [u64; 64],
-    king_masks: [u64; 64],
-    // pawn_moves_masks: [u64; 64],
-    // pawn_captures_masks: [u64; 64],
+    king_masks: [u64; 64]
 }
 
 
@@ -84,9 +84,7 @@ impl MoveTables {
             bishop_table: [[0; 1024]; 64],
             rook_table: [[0; 4096]; 64],
             knight_masks: [0; 64],
-            king_masks: [0; 64],
-            // pawn_moves_masks: [0; 64],
-            // pawn_captures_masks: [0; 64],
+            king_masks: [0; 64]
         };
         m.init();
         m
@@ -111,12 +109,41 @@ impl MoveTables {
         self.rook_table[index][key as usize]
     }
 
-    fn get_pawn_moves(&self, index: usize, blockers: u64) -> u64 {
-        todo!();
-    }
-
     fn get_knight_moves(&self, index: usize) -> u64 {
         self.knight_masks[index]
+    }
+
+    fn get_pawn_moves(&self, player: Player, index: i32, blockers: u64) -> u64 {
+        let mut res = 0_u64;
+        let start_row = match player {
+            PLAYER1 => 1,
+            PLAYER2 => 6
+        };
+
+        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index)) {
+            if move_one & blockers == 0 {
+                res |= move_one;
+                if let Some(move_two) = player.dir(Dir::North).mv(move_one) {
+                    if move_two & blockers == 0 && index % 8 == start_row {
+                        res |= move_two;
+                    }
+                }
+            }
+        }
+        res
+    }
+
+    fn get_pawn_captures(&self, player: Player, index: i32, enemy_blockers: u64) -> u64 {
+        let mut res = 0_u64;
+
+        for dir in [Dir::NorthEast, Dir::NorthWest].iter() {
+            if let Some(diag_place) = player.dir(*dir).mv(index_to_place(index)) {
+                res |= diag_place
+            }
+        }
+
+        res &= enemy_blockers;
+        res
     }
 
     fn create_blockers_from_index(index: i32, mut mask: u64) -> u64 {

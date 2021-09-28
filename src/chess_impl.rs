@@ -6,7 +6,7 @@ use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
 
 impl Player {
-    fn dir(&self, dir: Dir) -> Dir {
+    pub fn dir(&self, dir: Dir) -> Dir {
         match *self {
             PLAYER2 => dir,
             PLAYER1 => {
