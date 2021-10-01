@@ -1,4 +1,5 @@
 use std::cmp::min;
+use std::iter::{Copied, Chain};
 
 #[derive(Clone, Copy)]
 pub enum Dir {North, South, East, West, NorthEast, NorthWest, SouthEast, SouthWest}
@@ -21,6 +22,43 @@ impl Dir {
         }
         return None;
     }
+
+    pub fn adj() -> Copied<std::slice::Iter<'static, Dir>> {
+        static adjs: [Dir; 4] = [Dir::North, Dir::South, Dir::East, Dir::West];
+        return adjs.iter().copied();
+    }
+
+    pub fn diag() -> Copied<std::slice::Iter<'static, Dir>> {
+        static diag: [Dir; 4] = [Dir::NorthEast, Dir::NorthWest, Dir::SouthEast, Dir::SouthWest];
+        return diag.iter().copied();
+    }
+
+    pub fn all() -> Chain<Copied<std::slice::Iter<'static, Dir>>, Copied<std::slice::Iter<'static, Dir>>> {
+        return Dir::adj().chain(Dir::diag());
+    }
+
+}
+
+pub struct U64Iterator {
+    cur: u64
+}
+
+impl Iterator for U64Iterator {
+    type Item = i32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        return if self.cur == 0 {
+            None
+        } else {
+            let res = Some(self.cur.leading_zeros() as i32);
+            self.cur &= self.cur - 1;
+            res
+        }
+    }
+}
+
+pub fn iter_u64(board: u64) -> U64Iterator {
+    U64Iterator { cur: board }
 }
 
 pub fn index_to_place(index: i32) -> u64 {

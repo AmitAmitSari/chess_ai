@@ -1,9 +1,19 @@
 use crate::two_player_game::{Game, Player, GameState};
 use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
+use crate::chess_impl::PieceType::{PAWN, KNIGHT, BISHOP, QUEEN, ROOK, KING};
+use std::iter::Copied;
+use std::slice::Iter;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
+
+impl PieceType {
+    pub fn all() -> Copied<Iter<'static, PieceType>> {
+        static all_pieces: [PieceType; 6] = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING];
+        return all_pieces.iter().copied();
+    }
+}
 
 impl Player {
     pub fn dir(&self, dir: Dir) -> Dir {
@@ -40,6 +50,11 @@ pub struct BoardState {
 }
 
 impl BoardState {
+
+    pub fn get(&self, player: Player, piece_type: PieceType) -> u64 {
+        self.piece_state[player as usize][piece_type as usize]
+    }
+
     fn get_mut(&mut self, player: Player, piece_type: PieceType) -> &mut u64 {
         &mut self.piece_state[player as usize][piece_type as usize]
     }
@@ -50,11 +65,11 @@ impl BoardState {
         *piece_state |= to;
     }
 
-    fn all_occupancy(&self) -> u64 {
+    pub fn all_occupancy(&self) -> u64 {
         return self.occupancy(PLAYER1) | self.occupancy(PLAYER2);
     }
 
-    fn occupancy(&self, player: Player) -> u64 {
+    pub fn occupancy(&self, player: Player) -> u64 {
         self.piece_state[player as usize].iter().cloned().reduce(|a, b| a | b).unwrap()
     }
 }

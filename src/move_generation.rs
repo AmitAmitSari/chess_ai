@@ -1,6 +1,8 @@
-use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place};
+use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place, iter_u64};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 use crate::two_player_game::Player;
+use crate::chess_impl::{BoardState, PieceType};
+use crate::chess_impl::PieceType::PAWN;
 
 // These where generated such that for each square - multiplying the blockerboard with the magic for that square gives a unique set of the most significant X bits.
 const _ROOK_MAGICS: [u64; 64] = [
@@ -86,17 +88,33 @@ impl MoveTables {
             knight_masks: [0; 64],
             king_masks: [0; 64]
         };
-        m.init();
+        m._init();
         m
     }
 
-    fn init(&mut self) {
-        self.init_bishop_masks();
-        self.init_rook_masks();
-        self.init_bishop_tables();
-        self.init_rook_tables();
+    fn _init(&mut self) {
+        self._init_bishop_masks();
+        self._init_rook_masks();
+        self._init_bishop_tables();
+        self._init_rook_tables();
 
-        self.init_knight_masks();
+        self._init_knight_masks();
+        self._init_king_masks();
+    }
+
+    fn get_moves(&self, index: usize, player: Player, piece_type: PieceType, blockers: u64) -> u64 {
+        // For pawns - return only moves, not captures.
+        // Does not include castle
+
+        match piece_type {
+            PieceType::PAWN => self.get_pawn_moves(player, index, blockers),
+            PieceType::KNIGHT => self.get_knight_moves(index),
+            PieceType::BISHOP => self.get_bishop_moves(index, blockers),
+            PieceType::ROOK => self.get_rook_moves(index, blockers),
+            PieceType::QUEEN => self.get_rook_moves(index, blockers) & self.get_bishop_moves(index, blockers),
+            PieceType::KING => self.get_king_moves(index)
+        }
+
     }
 
     fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
@@ -113,14 +131,18 @@ impl MoveTables {
         self.knight_masks[index]
     }
 
-    fn get_pawn_moves(&self, player: Player, index: i32, blockers: u64) -> u64 {
+    fn get_king_moves(&self, index: usize) -> u64 {
+        self.king_masks[index]
+    }
+
+    fn get_pawn_moves(&self, player: Player, index: usize, blockers: u64) -> u64 {
         let mut res = 0_u64;
         let start_row = match player {
             PLAYER1 => 1,
             PLAYER2 => 6
         };
 
-        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index)) {
+        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index as i32)) {
             if move_one & blockers == 0 {
                 res |= move_one;
                 if let Some(move_two) = player.dir(Dir::North).mv(move_one) {
@@ -133,11 +155,11 @@ impl MoveTables {
         res
     }
 
-    fn get_pawn_captures(&self, player: Player, index: i32, enemy_blockers: u64) -> u64 {
+    fn get_pawn_captures(&self, player: Player, index: usize, enemy_blockers: u64) -> u64 {
         let mut res = 0_u64;
 
         for dir in [Dir::NorthEast, Dir::NorthWest].iter() {
-            if let Some(diag_place) = player.dir(*dir).mv(index_to_place(index)) {
+            if let Some(diag_place) = player.dir(*dir).mv(index_to_place(index as i32)) {
                 res |= diag_place
             }
         }
@@ -146,7 +168,27 @@ impl MoveTables {
         res
     }
 
-    fn create_blockers_from_index(index: i32, mut mask: u64) -> u64 {
+    fn get_king_danger_squares(&self, board: &BoardState, player: Player ) -> u64 {
+        let mut king_danger = 0_u64;
+        let other = player.other();
+
+        let occ_no_king = board.all_occupancy() & !board.get(player, PieceType::KING);
+
+        for piece_type in PieceType::all() {
+            for index in iter_u64(board.get(other, piece_type)) {
+                if piece_type == PAWN {
+                    king_danger |= self.get_pawn_captures(other, index as usize, !0)
+                }
+                else {
+                    king_danger |= self.get_moves(index as usize, other, piece_type, occ_no_king);
+                }
+            }
+        }
+
+        king_danger
+    }
+
+    fn _create_blockers_from_index(index: i32, mut mask: u64) -> u64 {
         let mut blockers: u64 = 0;
         let bits = mask.count_ones();
         for i in 0..bits {
@@ -159,7 +201,7 @@ impl MoveTables {
         blockers
     }
 
-    fn init_bishop_masks(&mut self) {
+    fn _init_bishop_masks(&mut self) {
         for index in 0_i32..64 {
             self.bishop_masks[index as usize] |= ray(index, Dir::NorthEast);
             self.bishop_masks[index as usize] |= ray(index, Dir::NorthWest);
@@ -168,7 +210,7 @@ impl MoveTables {
         }
     }
 
-    fn init_rook_masks(&mut self) {
+    fn _init_rook_masks(&mut self) {
         for index in 0_i32..64 {
             self.rook_masks[index as usize] |= ray(index, Dir::North);
             self.rook_masks[index as usize] |= ray(index, Dir::East);
@@ -177,31 +219,41 @@ impl MoveTables {
         }
     }
 
-    fn init_bishop_tables(&mut self) {
+    fn _init_bishop_tables(&mut self) {
         for index in 0..64 {
-            let blockers = MoveTables::create_blockers_from_index(index as i32, self.bishop_masks[index]);
+            let blockers = MoveTables::_create_blockers_from_index(index as i32, self.bishop_masks[index]);
             let key = (blockers * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
             self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
         }
     }
 
-    fn init_rook_tables(&mut self) {
+    fn _init_rook_tables(&mut self) {
         for index in 0..64 {
-            let blockers = MoveTables::create_blockers_from_index(index as i32, self.rook_masks[index]);
+            let blockers = MoveTables::_create_blockers_from_index(index as i32, self.rook_masks[index]);
             let key = (blockers * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
             self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
         }
     }
 
-    fn init_knight_masks(&mut self) {
+    fn _init_knight_masks(&mut self) {
         for index in 0..64 {
-            for dir in [Dir::North, Dir::South, Dir::East, Dir::West].iter() {
+            for dir in Dir::adj() {
                 if let Some(adj) = dir.mv(index_to_place(index)) {
-                    for diag_dir in [Dir::NorthEast, Dir::NorthWest, Dir::SouthEast, Dir::SouthWest].iter() {
+                    for diag_dir in Dir::diag() {
                         if let Some(final_move) = diag_dir.mv(adj) {
                             self.knight_masks[index as usize] |= final_move;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    fn _init_king_masks(&mut self) {
+        for index in 0..64 {
+            for dir in Dir::all() {
+                if let Some(m) = dir.mv(index_to_place(index)) {
+                    self.king_masks[index as usize] |= m;
                 }
             }
         }
