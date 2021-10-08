@@ -68,8 +68,8 @@ pub struct MoveTables {
     rook_masks: [u64; 64],
 
     // Map from key to moveboard for each square
-    bishop_table: [[u64; 1024]; 64],
-    rook_table: [[u64; 4096]; 64],
+    bishop_table: Vec<[u64; 1024]>,
+    rook_table: Vec<[u64; 4096]>,
 
     // Non sliding piece masks
     knight_masks: [u64; 64],
@@ -85,8 +85,8 @@ impl MoveTables {
         let mut m = MoveTables {
             bishop_masks: [0; 64],
             rook_masks: [0; 64],
-            bishop_table: [[0; 1024]; 64],
-            rook_table: [[0; 4096]; 64],
+            bishop_table: vec![[0; 1024]; 64],
+            rook_table: vec![[0; 4096]; 64],
             knight_masks: [0; 64],
             king_masks: [0; 64],
             rays: [[0; 64]; 8],
@@ -123,12 +123,12 @@ impl MoveTables {
     }
 
     pub fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
-        let key = ((blockers & self.bishop_masks[index]) * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
+        let key = ((blockers & self.bishop_masks[index]).wrapping_mul(_BISHOP_MAGICS[index])) >> (64 - _BISHOP_INDEX_BITS[index]);
         self.bishop_table[index][key as usize]
     }
 
     pub fn get_rook_moves(&self, index: usize, blockers: u64) -> u64 {
-        let key = ((blockers & self.rook_masks[index]) * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
+        let key = ((blockers & self.rook_masks[index]).wrapping_mul(_ROOK_MAGICS[index])) >> (64 - _ROOK_INDEX_BITS[index]);
         self.rook_table[index][key as usize]
     }
 
@@ -150,9 +150,11 @@ impl MoveTables {
         if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index as i32)) {
             if move_one & blockers == 0 {
                 res |= move_one;
-                if let Some(move_two) = player.dir(Dir::North).mv(move_one) {
-                    if move_two & blockers == 0 && index % 8 == start_row {
-                        res |= move_two;
+                if index / 8 == start_row {
+                    if let Some(move_two) = player.dir(Dir::North).mv(move_one) {
+                        if move_two & blockers == 0 {
+                            res |= move_two;
+                        }
                     }
                 }
             }
@@ -236,7 +238,7 @@ impl MoveTables {
     fn _init_bishop_tables(&mut self) {
         for index in 0..64 {
             let blockers = MoveTables::_create_blockers_from_index(index as i32, self.bishop_masks[index]);
-            let key = (blockers * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
+            let key = (blockers.wrapping_mul(_BISHOP_MAGICS[index])) >> (64 - _BISHOP_INDEX_BITS[index]);
             self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
         }
     }
@@ -244,7 +246,7 @@ impl MoveTables {
     fn _init_rook_tables(&mut self) {
         for index in 0..64 {
             let blockers = MoveTables::_create_blockers_from_index(index as i32, self.rook_masks[index]);
-            let key = (blockers * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
+            let key = (blockers.wrapping_mul(_ROOK_MAGICS[index])) >> (64 - _ROOK_INDEX_BITS[index]);
             self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
         }
     }

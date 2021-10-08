@@ -7,7 +7,7 @@ use std::slice::Iter;
 use crate::move_generation::MoveTables;
 use crate::two_player_game::GameState::PLAYING;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
 
 impl PieceType {
@@ -78,6 +78,7 @@ impl BoardState {
     }
 }
 
+#[derive(Debug)]
 pub struct Move {
     from: u64,
     to: u64,
@@ -322,7 +323,7 @@ impl Game for Chess {
         for i in 8..16 {
             *self.board.get_mut(PLAYER1, PAWN) |= index_to_place(i);
         }
-        *self.board.get_mut(PLAYER1, PAWN) |= self.board.get(PLAYER1, PAWN) << (8 * 5);
+        *self.board.get_mut(PLAYER2, PAWN) |= self.board.get(PLAYER1, PAWN) << (8 * 5);
 
         *self.board.get_mut(PLAYER1, ROOK) |= index_to_place(0) | index_to_place(7);
         *self.board.get_mut(PLAYER1, KNIGHT) |= index_to_place(1) | index_to_place(6);
@@ -457,7 +458,7 @@ impl Game for Chess {
         for y in 0..8 {
             for x in 0..8 {
                 if let Some((player, piece_type)) = self.board.type_at(index_to_place(coord_to_index((x, y)))) {
-                    let info_to_char = [["P", "N", "B", "R", "Q", "K"], ["p", "n", "b", "r", "Q", "k"]];
+                    let info_to_char = [["P", "N", "B", "R", "Q", "K"], ["p", "n", "b", "r", "q", "k"]];
                     print!("{}", info_to_char[player as usize][piece_type as usize]);
                 } else {
                     print!(" ");

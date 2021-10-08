@@ -14,4 +14,8 @@ mod move_generation;
 fn main() {
     let mut chess = Chess::new();
     chess.console_draw();
+    for m in chess.possible_moves() {
+        println!("{:?}", m);
+    }
+
 }

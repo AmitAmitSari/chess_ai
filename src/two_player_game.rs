@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub enum Player { PLAYER1 = 0, PLAYER2 = 1 }
 
 #[derive(Eq, PartialEq, Clone, Copy)]

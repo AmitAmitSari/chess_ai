@@ -17,7 +17,7 @@ impl Dir {
             Dir::SouthEast => (x + 1, y + 1),
             Dir::SouthWest => (x - 1, y + 1)
         };
-        if 0 <= x && x < 7 && 0 <= y && y < 7 {
+        if 0 <= dx && dx <= 7 && 0 <= dy && dy <= 7 {
             return Some(index_to_place(coord_to_index((dx, dy))));
         }
         return None;
@@ -85,9 +85,9 @@ impl Iterator for PlaceIterator {
         return if self.cur == 0 {
             None
         } else {
-            let res = Some(self.cur ^ (self.cur - 1));
+            let prev = self.cur;
             self.cur &= self.cur - 1;
-            res
+            Some(prev ^ self.cur)
         }
     }
 }
@@ -101,15 +101,15 @@ pub fn index_to_place(index: i32) -> u64 {
 }
 
 pub fn index(place: u64) -> i32 {
-    place.leading_zeros() as i32
+    place.trailing_zeros() as i32
 }
 
 pub fn coord_to_index(coord: (i32, i32)) -> i32 {
-    return coord.0 * 8 + coord.1
+    return coord.1 * 8 + coord.0
 }
 
 pub fn index_to_coord(index: i32) -> (i32, i32) {
-    return (index / 8, index % 8)
+    return (index % 8, index / 8)
 }
 
 pub fn place_to_coord(place: u64) -> (i32, i32) {
