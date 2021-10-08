@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::two_player_game::{Game};
 use crate::alpha_beta::get_next_move;
-use crate::bit_help::place_to_coord;
+use crate::bit_help::{coord_to_index, Dir, index, index_to_place, place_to_coord, ray};
 use crate::chess_impl::{Chess, Move};
 use crate::two_player_game::GameState::PLAYING;
 
@@ -41,10 +41,32 @@ impl Display for Move {
     }
 }
 
+fn print_u64(map: u64) {
+    for y in 0..8 {
+        for x in 0..8 {
+            if map & index_to_place(coord_to_index((x, y))) != 0 {
+                print!("1")
+            } else {
+                print!("0")
+            }
+        }
+        println!()
+    }
+}
+
 fn main() {
     let mut chess = Chess::new();
+
+    // for dir in Dir::all() {
+    //     println!("{:?}", dir);
+    //     print_u64(ray(coord_to_index((4, 4)), dir));
+    //     println!();
+    // }
+    //
+    // println!();
+
     println!("{}", count_positions(&mut chess, 3));
-    chess.do_move(chess.possible_moves().remove(11));
+    chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == 11).nth(1).unwrap());
     chess.do_move(chess.possible_moves().remove(6));
     chess.console_draw();
     for m in chess.possible_moves() {

@@ -238,17 +238,21 @@ impl MoveTables {
 
     fn _init_bishop_tables(&mut self) {
         for index in 0..64 {
-            let blockers = MoveTables::_create_blockers_from_index(index as i32, self.bishop_masks[index]);
-            let key = (blockers.wrapping_mul(_BISHOP_MAGICS[index])) >> (64 - _BISHOP_INDEX_BITS[index]);
-            self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
+            for blocker_index in 0..1<<_BISHOP_INDEX_BITS[index] {
+                let blockers = MoveTables::_create_blockers_from_index(blocker_index as i32, self.bishop_masks[index]);
+                let key = (blockers.wrapping_mul(_BISHOP_MAGICS[index])) >> (64 - _BISHOP_INDEX_BITS[index]);
+                self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
+            }
         }
     }
 
     fn _init_rook_tables(&mut self) {
         for index in 0..64 {
-            let blockers = MoveTables::_create_blockers_from_index(index as i32, self.rook_masks[index]);
-            let key = (blockers.wrapping_mul(_ROOK_MAGICS[index])) >> (64 - _ROOK_INDEX_BITS[index]);
-            self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
+            for blocker_index in 0..1<<_ROOK_INDEX_BITS[index] {
+                let blockers = MoveTables::_create_blockers_from_index(blocker_index as i32, self.rook_masks[index]);
+                let key = (blockers.wrapping_mul(_ROOK_MAGICS[index])) >> (64 - _ROOK_INDEX_BITS[index]);
+                self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
+            }
         }
     }
 
