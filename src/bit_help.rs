@@ -23,14 +23,27 @@ impl Dir {
         return None;
     }
 
+    pub fn flip(&self) -> Dir {
+        match *self {
+            Dir::North => Dir::South,
+            Dir::South => Dir::North,
+            Dir::East => Dir::West,
+            Dir::West => Dir::East,
+            Dir::NorthEast => Dir::NorthWest,
+            Dir::NorthWest => Dir::SouthEast,
+            Dir::SouthEast => Dir::NorthWest,
+            Dir::SouthWest => Dir::NorthEast
+        }
+    }
+
     pub fn adj() -> Copied<std::slice::Iter<'static, Dir>> {
-        static adjs: [Dir; 4] = [Dir::North, Dir::South, Dir::East, Dir::West];
-        return adjs.iter().copied();
+        static ADJS: [Dir; 4] = [Dir::North, Dir::South, Dir::East, Dir::West];
+        return ADJS.iter().copied();
     }
 
     pub fn diag() -> Copied<std::slice::Iter<'static, Dir>> {
-        static diag: [Dir; 4] = [Dir::NorthEast, Dir::NorthWest, Dir::SouthEast, Dir::SouthWest];
-        return diag.iter().copied();
+        static DIAG: [Dir; 4] = [Dir::NorthEast, Dir::NorthWest, Dir::SouthEast, Dir::SouthWest];
+        return DIAG.iter().copied();
     }
 
     pub fn all() -> Chain<Copied<std::slice::Iter<'static, Dir>>, Copied<std::slice::Iter<'static, Dir>>> {
@@ -39,11 +52,11 @@ impl Dir {
 
 }
 
-pub struct U64Iterator {
+pub struct IndexIterator {
     cur: u64
 }
 
-impl Iterator for U64Iterator {
+impl Iterator for IndexIterator {
     type Item = i32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -57,8 +70,30 @@ impl Iterator for U64Iterator {
     }
 }
 
-pub fn iter_u64(board: u64) -> U64Iterator {
-    U64Iterator { cur: board }
+pub fn iter_index(board: u64) -> IndexIterator {
+    IndexIterator { cur: board }
+}
+
+pub struct PlaceIterator {
+    cur: u64
+}
+
+impl Iterator for PlaceIterator {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        return if self.cur == 0 {
+            None
+        } else {
+            let res = Some(self.cur ^ (self.cur - 1));
+            self.cur &= self.cur - 1;
+            res
+        }
+    }
+}
+
+pub fn iter_place(board: u64) -> PlaceIterator {
+    PlaceIterator { cur: board }
 }
 
 pub fn index_to_place(index: i32) -> u64 {
@@ -82,6 +117,7 @@ pub fn place_to_coord(place: u64) -> (i32, i32) {
 }
 
 pub fn ray(index: i32, dir: Dir) -> u64 {
+    // Not including edge, not including index.
     let start = index_to_place(index);
     let (n, e, w, s) = (
         (index / 8) - 1,
@@ -111,6 +147,8 @@ fn _ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
 }
 
 pub fn ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
+    // not including index, or edge, including blocker.
+    // todo: Should include edge.
     let mut res = ray(index, dir);
     if res & blockers != 0 {
         let first_blocker_index = match dir {

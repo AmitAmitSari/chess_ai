@@ -1,4 +1,4 @@
-use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place, iter_u64};
+use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place, iter_index};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 use crate::two_player_game::Player;
 use crate::chess_impl::{BoardState, PieceType};
@@ -61,7 +61,7 @@ const _BISHOP_INDEX_BITS: [i32; 64] = [
 ];
 
 
-struct MoveTables {
+pub struct MoveTables {
 
     // All move location for each square - not including board edge
     bishop_masks: [u64; 64],
@@ -73,7 +73,9 @@ struct MoveTables {
 
     // Non sliding piece masks
     knight_masks: [u64; 64],
-    king_masks: [u64; 64]
+    king_masks: [u64; 64],
+
+    rays: [[u64; 64]; 8],
 }
 
 
@@ -86,7 +88,8 @@ impl MoveTables {
             bishop_table: [[0; 1024]; 64],
             rook_table: [[0; 4096]; 64],
             knight_masks: [0; 64],
-            king_masks: [0; 64]
+            king_masks: [0; 64],
+            rays: [[0; 64]; 8],
         };
         m._init();
         m
@@ -100,9 +103,11 @@ impl MoveTables {
 
         self._init_knight_masks();
         self._init_king_masks();
+
+        self._init_rays();
     }
 
-    fn get_moves(&self, index: usize, player: Player, piece_type: PieceType, blockers: u64) -> u64 {
+    pub fn get_moves(&self, index: usize, player: Player, piece_type: PieceType, blockers: u64) -> u64 {
         // For pawns - return only moves, not captures.
         // Does not include castle
 
@@ -111,31 +116,31 @@ impl MoveTables {
             PieceType::KNIGHT => self.get_knight_moves(index),
             PieceType::BISHOP => self.get_bishop_moves(index, blockers),
             PieceType::ROOK => self.get_rook_moves(index, blockers),
-            PieceType::QUEEN => self.get_rook_moves(index, blockers) & self.get_bishop_moves(index, blockers),
+            PieceType::QUEEN => self.get_rook_moves(index, blockers) | self.get_bishop_moves(index, blockers),
             PieceType::KING => self.get_king_moves(index)
         }
 
     }
 
-    fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
+    pub fn get_bishop_moves(&self, index: usize, blockers: u64) -> u64 {
         let key = ((blockers & self.bishop_masks[index]) * _BISHOP_MAGICS[index]) >> (64 - _BISHOP_INDEX_BITS[index]);
         self.bishop_table[index][key as usize]
     }
 
-    fn get_rook_moves(&self, index: usize, blockers: u64) -> u64 {
+    pub fn get_rook_moves(&self, index: usize, blockers: u64) -> u64 {
         let key = ((blockers & self.rook_masks[index]) * _ROOK_MAGICS[index]) >> (64 - _ROOK_INDEX_BITS[index]);
         self.rook_table[index][key as usize]
     }
 
-    fn get_knight_moves(&self, index: usize) -> u64 {
+    pub fn get_knight_moves(&self, index: usize) -> u64 {
         self.knight_masks[index]
     }
 
-    fn get_king_moves(&self, index: usize) -> u64 {
+    pub fn get_king_moves(&self, index: usize) -> u64 {
         self.king_masks[index]
     }
 
-    fn get_pawn_moves(&self, player: Player, index: usize, blockers: u64) -> u64 {
+    pub fn get_pawn_moves(&self, player: Player, index: usize, blockers: u64) -> u64 {
         let mut res = 0_u64;
         let start_row = match player {
             PLAYER1 => 1,
@@ -155,7 +160,7 @@ impl MoveTables {
         res
     }
 
-    fn get_pawn_captures(&self, player: Player, index: usize, enemy_blockers: u64) -> u64 {
+    pub fn get_pawn_captures(&self, player: Player, index: usize, enemy_blockers: u64) -> u64 {
         let mut res = 0_u64;
 
         for dir in [Dir::NorthEast, Dir::NorthWest].iter() {
@@ -168,14 +173,14 @@ impl MoveTables {
         res
     }
 
-    fn get_king_danger_squares(&self, board: &BoardState, player: Player ) -> u64 {
+    pub fn get_king_danger_squares(&self, board: &BoardState, player: Player ) -> u64 {
         let mut king_danger = 0_u64;
         let other = player.other();
 
         let occ_no_king = board.all_occupancy() & !board.get(player, PieceType::KING);
 
         for piece_type in PieceType::all() {
-            for index in iter_u64(board.get(other, piece_type)) {
+            for index in iter_index(board.get(other, piece_type)) {
                 if piece_type == PAWN {
                     king_danger |= self.get_pawn_captures(other, index as usize, !0)
                 }
@@ -186,6 +191,15 @@ impl MoveTables {
         }
 
         king_danger
+    }
+
+    pub fn get_ray(&self, from: usize, to: usize) -> u64 {
+        // Not including from and to. and not including edge.
+        let mut res = 0;
+        for dir in Dir::all() {
+            res |= self.rays[dir as usize][from] & self.rays[dir.flip() as usize][to]
+        }
+        res
     }
 
     fn _create_blockers_from_index(index: i32, mut mask: u64) -> u64 {
@@ -255,6 +269,14 @@ impl MoveTables {
                 if let Some(m) = dir.mv(index_to_place(index)) {
                     self.king_masks[index as usize] |= m;
                 }
+            }
+        }
+    }
+
+    fn _init_rays(&mut self) {
+        for dir in Dir::all() {
+            for index in 0..64 {
+                self.rays[dir as usize][index] = ray_until_blocker(index as i32, 0, dir);
             }
         }
     }

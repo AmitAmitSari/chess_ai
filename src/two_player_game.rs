@@ -16,18 +16,20 @@ impl Player {
 }
 
 pub trait Game {
-    type T;
+    type MoveType;
+
+    fn setup_new_game(&mut self);
 
     fn current_player(&self) -> Player;
 
     // Return a vector of possible moves.
-    fn possible_moves(&self) -> Vec<Self::T>;
+    fn possible_moves(&self) -> Vec<Self::MoveType>;
 
     // Mutate the Board state doing the move 'play'
-    fn do_move(&mut self, play: Self::T);
+    fn do_move(&mut self, play: Self::MoveType);
 
     // Undo the last move.
-    fn undo_move(&mut self) -> Self::T;
+    fn undo_move(&mut self) -> Self::MoveType;
 
     // Return
     fn game_state(&self) -> GameState;

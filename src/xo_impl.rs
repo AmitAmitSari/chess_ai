@@ -35,7 +35,13 @@ impl Xo {
 }
 
 impl Game for Xo {
-    type T = usize;
+    type MoveType = usize;
+
+    fn setup_new_game(&mut self) {
+        self.history.clear();
+        self.state.fill(Square::E);
+        self.cur_player = Square::X;
+    }
 
     fn current_player(&self) -> Player {
         if self.cur_player == Square::X { Player::PLAYER1 } else { Player::PLAYER2 }

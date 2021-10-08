@@ -20,8 +20,6 @@ fn main() {
         xo.do_move(m.unwrap());
         println!();
         xo.console_draw();
-        //println!("{:?}", xo.get_score());
-
 
     }
 }
