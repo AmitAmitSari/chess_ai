@@ -80,8 +80,8 @@ impl BoardState {
 
 #[derive(Debug)]
 pub struct Move {
-    from: u64,
-    to: u64,
+    pub from: u64,
+    pub to: u64,
     start_type: PieceType,
     end_type: PieceType,
 
@@ -400,6 +400,8 @@ impl Game for Chess {
     }
 
     fn do_move(&mut self, play: Self::MoveType) {
+        let prev_castle = self.board.castle_memory;
+        let prev_en_passant = self.board.en_passant_square;
 
         *self.board.get_mut(play.moving_player, play.start_type) &= !play.from;
         *self.board.get_mut(play.moving_player, play.end_type) |= play.to;
@@ -422,9 +424,9 @@ impl Game for Chess {
         }
 
         self.board.castle_memory = play.castle_memory;
-        self.current_player = play.moving_player.other();
+        self.current_player = self.current_player.other();
 
-        self.history.push((play, self.board.castle_memory, self.board.en_passant_square));
+        self.history.push((play, prev_castle, prev_en_passant));
     }
 
     fn undo_move(&mut self) -> Self::MoveType {
@@ -441,10 +443,9 @@ impl Game for Chess {
             self.board.move_piece(play.moving_player, PieceType::ROOK, to_index, from_index);
         }
 
-        // todo: This is wrong, change move castle memory to be the one before the move
         self.board.castle_memory = castle_memory;
         self.board.en_passant_square = en_passant_square;
-        self.current_player = play.moving_player.other();
+        self.current_player = self.current_player.other();
 
         play
     }

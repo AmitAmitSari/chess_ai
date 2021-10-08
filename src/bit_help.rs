@@ -116,28 +116,33 @@ pub fn place_to_coord(place: u64) -> (i32, i32) {
     return index_to_coord(index(place));
 }
 
+
 pub fn ray(index: i32, dir: Dir) -> u64 {
-    // Not including edge, not including index.
+    _ray(index, dir, 0)
+}
+
+pub fn _ray(index: i32, dir: Dir, edge_buffer: i32) -> u64 {
+    // not including index.
     let start = index_to_place(index);
     let (n, e, w, s) = (
-        (index / 8) - 1,
-        7 - (index / 8),
-        (index % 8) - 1,
-        7 - (index % 8)
+        (index / 8) - edge_buffer,
+        8 - (index / 8) - edge_buffer,
+        (index % 8) - edge_buffer,
+        8 - (index % 8) - edge_buffer
     );
     match dir {
-        Dir::North => _ray(start, n, |x| x >> 8),
-        Dir::South => _ray(start, e, |x| x << 8),
-        Dir::East => _ray(start, w, |x| x >> 1),
-        Dir::West => _ray(start, s, |x| x << 1),
-        Dir::NorthEast => _ray(start, min(n, e), |x| x >> 7),
-        Dir::NorthWest => _ray(start, min(n, w), |x| x >> 9),
-        Dir::SouthEast => _ray(start, min(s, e), |x| x << 9),
-        Dir::SouthWest => _ray(start, min(s, w), |x| x << 7),
+        Dir::North => __ray(start, n, |x| x >> 8),
+        Dir::South => __ray(start, e, |x| x << 8),
+        Dir::East => __ray(start, w, |x| x >> 1),
+        Dir::West => __ray(start, s, |x| x << 1),
+        Dir::NorthEast => __ray(start, min(n, e), |x| x >> 7),
+        Dir::NorthWest => __ray(start, min(n, w), |x| x >> 9),
+        Dir::SouthEast => __ray(start, min(s, e), |x| x << 9),
+        Dir::SouthWest => __ray(start, min(s, w), |x| x << 7),
     }
 }
 
-fn _ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
+fn __ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
     let mut ray = 0_u64;
     for _ in 0..cnt {
         start = func(start);
@@ -147,8 +152,7 @@ fn _ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
 }
 
 pub fn ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
-    // not including index, or edge, including blocker.
-    // todo: Should include edge.
+    // not including index, including blocker.
     let mut res = ray(index, dir);
     if res & blockers != 0 {
         let first_blocker_index = match dir {
