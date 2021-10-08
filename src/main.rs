@@ -66,10 +66,13 @@ fn main() {
     // println!();
 
     println!("{}", count_positions(&mut chess, 3));
-    chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == 11).nth(1).unwrap());
-    chess.do_move(chess.possible_moves().remove(6));
+    chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == 9).nth(1).unwrap());
+    chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == coord_to_index((0, 6))).nth(0).unwrap());
     chess.console_draw();
     for m in chess.possible_moves() {
-        println!("{}", m);
+        chess.do_move(m);
+        let cnt = count_positions(&mut chess, 1);
+        let x = chess.undo_move();
+        println!("{}, {}", cnt, x);
     }
 }

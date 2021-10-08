@@ -113,7 +113,7 @@ impl MoveTables {
         // Does not include castle
 
         match piece_type {
-            PieceType::PAWN => self.get_pawn_moves(player, index, blockers),
+            PieceType::PAWN => self.get_pawn_moves(player, index, blockers) | self.get_pawn_captures(player, index, blockers),
             PieceType::KNIGHT => self.get_knight_moves(index),
             PieceType::BISHOP => self.get_bishop_moves(index, blockers),
             PieceType::ROOK => self.get_rook_moves(index, blockers),
