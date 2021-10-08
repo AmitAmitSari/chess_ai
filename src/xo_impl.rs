@@ -37,6 +37,10 @@ impl Xo {
 impl Game for Xo {
     type MoveType = usize;
 
+    fn new() -> Self {
+        Xo::new_game()
+    }
+
     fn setup_new_game(&mut self) {
         self.history.clear();
         self.state.fill(Square::E);

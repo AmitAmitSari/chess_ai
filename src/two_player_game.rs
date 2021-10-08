@@ -18,6 +18,8 @@ impl Player {
 pub trait Game {
     type MoveType;
 
+    fn new() -> Self;
+
     fn setup_new_game(&mut self);
 
     fn current_player(&self) -> Player;

@@ -104,7 +104,7 @@ pub struct Chess {
     board: BoardState,
     // Move, castle memory and en passant square after move.. todo: Change to before move for easier undo
     history: Vec<(Move, u64, u64)>,
-    move_tables: MoveTables
+    move_tables: Box<MoveTables>
 }
 
 impl Chess {
@@ -293,6 +293,21 @@ impl Chess {
 
 impl Game for Chess {
     type MoveType = Move;
+
+    fn new() -> Self {
+        let mut chess = Chess {
+            current_player: Player::PLAYER1,
+            board: BoardState {
+                piece_state: [[0; 6]; 2],
+                castle_memory: 0,
+                en_passant_square: 0
+            },
+            history: vec![],
+            move_tables: Box::new(MoveTables::new())
+        };
+        chess.setup_new_game();
+        chess
+    }
 
     fn setup_new_game(&mut self) {
         self.board.castle_memory = KING_PLACES[0] | KING_PLACES[1] | KINGSIDE_ROOKS[0] | KINGSIDE_ROOKS[1] | QUEENSIDE_ROOKS[0] | QUEENSIDE_ROOKS[1];

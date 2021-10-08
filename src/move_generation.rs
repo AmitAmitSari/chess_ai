@@ -81,7 +81,7 @@ pub struct MoveTables {
 
 impl MoveTables {
 
-    fn new() -> MoveTables {
+    pub fn new() -> MoveTables {
         let mut m = MoveTables {
             bishop_masks: [0; 64],
             rook_masks: [0; 64],
