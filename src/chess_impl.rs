@@ -5,6 +5,7 @@ use crate::chess_impl::PieceType::{PAWN, KNIGHT, BISHOP, QUEEN, ROOK, KING};
 use std::iter::Copied;
 use std::slice::Iter;
 use crate::move_generation::MoveTables;
+use crate::print_u64;
 use crate::two_player_game::GameState::PLAYING;
 
 #[derive(Copy, Clone, PartialEq, Debug)]

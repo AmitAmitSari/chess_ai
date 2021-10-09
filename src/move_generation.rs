@@ -4,6 +4,7 @@ use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 use crate::two_player_game::Player;
 use crate::chess_impl::{BoardState, PieceType};
 use crate::chess_impl::PieceType::PAWN;
+use crate::print_u64;
 
 // These where generated such that for each square - multiplying the blockerboard with the magic for that square gives a unique set of the most significant X bits.
 const _ROOK_MAGICS: [u64; 64] = [
@@ -176,7 +177,7 @@ impl MoveTables {
         res
     }
 
-    pub fn get_king_danger_squares(&self, board: &BoardState, player: Player ) -> u64 {
+    pub fn get_king_danger_squares(&self, board: &BoardState, player: Player) -> u64 {
         let mut king_danger = 0_u64;
         let other = player.other();
 
@@ -185,7 +186,7 @@ impl MoveTables {
         for piece_type in PieceType::all() {
             for index in iter_index(board.get(other, piece_type)) {
                 if piece_type == PAWN {
-                    king_danger |= self.get_pawn_captures(other, index as usize, !0)
+                    king_danger |= self.get_pawn_captures(other, index as usize, !0);
                 }
                 else {
                     king_danger |= self.get_moves(index as usize, other, piece_type, occ_no_king);

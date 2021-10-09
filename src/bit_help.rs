@@ -63,7 +63,7 @@ impl Iterator for IndexIterator {
         return if self.cur == 0 {
             None
         } else {
-            let res = Some(self.cur.leading_zeros() as i32);
+            let res = Some(self.cur.trailing_zeros() as i32);
             self.cur &= self.cur - 1;
             res
         }
