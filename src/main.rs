@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::two_player_game::{Game};
 use crate::alpha_beta::get_next_move;
-use crate::bit_help::{coord_to_index, Dir, index, index_to_place, place_to_coord, ray};
+use crate::bit_help::{coord_to_index, Dir, index, index_to_place, place_to_coord, ray, ray_until_blocker};
 use crate::chess_impl::{Chess, Move};
 use crate::two_player_game::GameState::PLAYING;
 
@@ -57,21 +57,22 @@ fn print_u64(map: u64) {
 fn main() {
     let mut chess = Chess::new();
 
-    // for dir in Dir::all() {
-    //     println!("{:?}", dir);
-    //     print_u64(ray(coord_to_index((4, 4)), dir));
-    //     println!();
-    // }
-    //
-    // println!();
+    for &move_str in ["d2d3"].iter() {
+        chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
+    }
 
-    println!("{}", count_positions(&mut chess, 3));
-    // chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == 9).nth(1).unwrap());
-    // chess.do_move(chess.possible_moves().into_iter().filter(|m| index(m.from) == coord_to_index((0, 6))).nth(0).unwrap());
     chess.console_draw();
+    let depth = 4;
+
+    for i in 1..depth+1 {
+        println!("{}", count_positions(&mut chess, i));
+    }
+
     for m in chess.possible_moves() {
         chess.do_move(m);
-        let cnt = count_positions(&mut chess, 2);
+        let cnt = if depth > 1 {
+            count_positions(&mut chess, depth - 1)
+        } else { 0 };
         let x = chess.undo_move();
         println!("{}, {}", cnt, x);
     }

@@ -1,5 +1,5 @@
 use crate::two_player_game::{Game, Player, GameState};
-use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place};
+use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place, ray_until_blocker};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 use crate::chess_impl::PieceType::{PAWN, KNIGHT, BISHOP, QUEEN, ROOK, KING};
 use std::iter::Copied;
@@ -94,8 +94,6 @@ pub struct Move {
     castle_memory: u64,
     // Is this move a castle?
     castle_flag: bool,
-    // Is this move en passant?
-    en_passant_flag: bool,
 
     moving_player: Player
 }
@@ -111,11 +109,11 @@ pub struct Chess {
 
 impl Chess {
     pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
-        let (from_index, to_index): (i32, i32) = match king_end_location {
-            x if x == index_to_place(2) => (0, 3),
-            x if x == index_to_place(6) => (7, 5),
-            x if x == index_to_place(62) => (63, 61),
-            x if x == index_to_place(58) => (56, 59),
+        let (from_index, to_index): (i32, i32) = match index(king_end_location) {
+            x if x == 1 => (0, 2),
+            x if x == 5 => (7, 4),
+            x if x == 62 => (63, 61),
+            x if x == 57 => (56, 58),
             _ => { panic!("Tried to castle to an invalid location!") }
         };
         (index_to_place(from_index), index_to_place(to_index))
@@ -163,7 +161,6 @@ impl Chess {
                     eaten_loc: 0,
                     castle_memory: self.board.castle_memory & !king_place,
                     castle_flag: true,
-                    en_passant_flag: false,
                     moving_player: self.current_player
                 })
             }
@@ -181,7 +178,6 @@ impl Chess {
                     eaten_loc: 0,
                     castle_memory: self.board.castle_memory & !king_place,
                     castle_flag: true,
-                    en_passant_flag: false,
                     moving_player: self.current_player
                 })
             }
@@ -248,7 +244,6 @@ impl Chess {
                         eaten_loc: eaten,
                         castle_memory: self.board.castle_memory,
                         castle_flag: false,
-                        en_passant_flag: false,
                         moving_player: self.current_player
                     })
 
@@ -285,7 +280,6 @@ impl Chess {
                 eaten_loc,
                 castle_memory: self.board.castle_memory & !from,
                 castle_flag: false,
-                en_passant_flag: false,
                 moving_player: self.current_player
             })
         }
@@ -416,12 +410,13 @@ impl Game for Chess {
         }
 
         // En passant
-        if play.en_passant_flag {
+        self.board.en_passant_square = 0;
+        if play.start_type == PAWN {
             let (from_x, from_y) = place_to_coord(play.from);
             let (_, to_y) = place_to_coord(play.to);
-            self.board.en_passant_square = index_to_place(coord_to_index((from_x, (from_y + to_y) / 2)));
-        } else {
-            self.board.en_passant_square = 0;
+            if (from_y as i32 - to_y as i32).abs() == 2 {
+                self.board.en_passant_square = index_to_place(coord_to_index((from_x, (from_y + to_y) / 2)));
+            }
         }
 
         self.board.castle_memory = play.castle_memory;

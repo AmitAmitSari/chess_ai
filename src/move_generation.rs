@@ -110,8 +110,7 @@ impl MoveTables {
     }
 
     pub fn get_moves(&self, index: usize, player: Player, piece_type: PieceType, blockers: u64) -> u64 {
-        // For pawns - return only moves, not captures.
-        // Does not include castle
+        // Does not include castle or en passant capture
 
         match piece_type {
             PieceType::PAWN => self.get_pawn_moves(player, index, blockers) | self.get_pawn_captures(player, index, blockers),

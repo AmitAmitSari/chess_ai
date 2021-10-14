@@ -127,18 +127,18 @@ pub fn _ray(index: i32, dir: Dir, edge_buffer: i32) -> u64 {
     let (n, s, e, w) = (
         (index / 8) - edge_buffer,
         7 - (index / 8) - edge_buffer,
-        (index % 8) - edge_buffer,
-        7 - (index % 8) - edge_buffer
+        7 - (index % 8) - edge_buffer,
+        (index % 8) - edge_buffer
     );
     match dir {
         Dir::North => __ray(start, n, |x| x >> 8),
         Dir::South => __ray(start, s, |x| x << 8),
-        Dir::East => __ray(start, e, |x| x >> 1),
-        Dir::West => __ray(start, w, |x| x << 1),
-        Dir::NorthEast => __ray(start, min(n, e), |x| x >> 9),
-        Dir::NorthWest => __ray(start, min(n, w), |x| x >> 7),
-        Dir::SouthEast => __ray(start, min(s, e), |x| x << 7),
-        Dir::SouthWest => __ray(start, min(s, w), |x| x << 9),
+        Dir::East => __ray(start, e, |x| x << 1),
+        Dir::West => __ray(start, w, |x| x >> 1),
+        Dir::NorthEast => __ray(start, min(n, e), |x| x >> 7),
+        Dir::NorthWest => __ray(start, min(n, w), |x| x >> 9),
+        Dir::SouthEast => __ray(start, min(s, e), |x| x << 9),
+        Dir::SouthWest => __ray(start, min(s, w), |x| x << 7),
     }
 }
 
