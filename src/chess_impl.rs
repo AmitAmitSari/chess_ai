@@ -186,17 +186,19 @@ impl Chess {
 
     fn add_pinned_moves(&self, possible_moves: &mut Vec<Move>, capture_mask: u64, push_mask: u64) -> u64 {
         // Returns a board of pinned pieces.
-        let occ = self.board.all_occupancy();
-        let my_occ = self.board.occupancy(self.current_player);
-        let king_index = index(self.board.get(self.current_player, KING)) as usize;
         let enemy = self.current_player.other();
+        let my_occ = self.board.occupancy(self.current_player);
+        let enemy_occ = self.board.occupancy(enemy);
+        let occ = my_occ | enemy_occ;
+        let king_index = index(self.board.get(self.current_player, KING)) as usize;
+
         let enemy_rooks = self.board.get(enemy, ROOK) | self.board.get(enemy, QUEEN);
         let enemy_bishops = self.board.get(enemy, BISHOP) | self.board.get(enemy, QUEEN);
 
         let mut pinned = 0_u64;
         let mut pinners = 0_u64;
-        pinners |= self.move_tables.get_rook_moves(king_index, enemy_rooks) & enemy_rooks;
-        pinners |= self.move_tables.get_bishop_moves(king_index, enemy_bishops) & enemy_bishops;
+        pinners |= self.move_tables.get_rook_moves(king_index, enemy_occ) & enemy_rooks;
+        pinners |= self.move_tables.get_bishop_moves(king_index, enemy_occ) & enemy_bishops;
 
         for i in iter_index(pinners) {
             let pin = self.move_tables.get_ray(king_index, i as usize) & my_occ;

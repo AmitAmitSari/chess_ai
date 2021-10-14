@@ -57,12 +57,12 @@ fn print_u64(map: u64) {
 fn main() {
     let mut chess = Chess::new();
 
-    for &move_str in ["d2d3"].iter() {
+    for &move_str in ["d2d3", "e7e5", "e1d2", "e5e4"].iter() {
         chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
     }
 
     chess.console_draw();
-    let depth = 4;
+    let depth = 1;
 
     for i in 1..depth+1 {
         println!("{}", count_positions(&mut chess, i));
