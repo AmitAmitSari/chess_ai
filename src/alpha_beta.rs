@@ -71,7 +71,9 @@ fn alpha_beta<Y>(game: &mut Y, depth: i32, mut a: Y::ScoreType, mut b: Y::ScoreT
             game.do_move(m);
             score = max(score, alpha_beta(game, depth - 1, a, b));
             game.undo_move();
-            if score >= b {
+            // Specifying >= here would let me look at less positions. But I can no longer trust an equal score. If the scores are equal I need to take the first.
+            // But I want the engine to take a random move among the best - so I need to be able to trust ties.
+            if score > b {
                 break;
             }
             a = max(a, score);
@@ -82,7 +84,7 @@ fn alpha_beta<Y>(game: &mut Y, depth: i32, mut a: Y::ScoreType, mut b: Y::ScoreT
             game.do_move(m);
             score = min(score, alpha_beta(game, depth - 1, a, b));
             game.undo_move();
-            if score <= a {
+            if score < a {
                 break;
             }
             b = min(b, score);

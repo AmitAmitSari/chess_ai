@@ -61,7 +61,7 @@ fn print_u64(map: u64) {
 fn play_game(game: &mut Chess, player: Player) -> GameState {
     loop {
         if game.current_player() == player {
-            let om = get_next_move(game, 4);
+            let om = get_next_move(game, 6);
             if om.is_none() {
                 // todo: fix
                 return GameState::PLAYER1WIN;
