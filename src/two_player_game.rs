@@ -16,7 +16,7 @@ impl Player {
 }
 
 pub trait Game {
-    type MoveType;
+    type MoveType: Display;
 
     fn new() -> Self;
 

@@ -1,4 +1,4 @@
-use crate::two_player_game::{Game, Player, GameState};
+use crate::two_player_game::{Game, Player, GameState, Scored};
 use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place, ray_until_blocker};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
 use crate::chess_impl::PieceType::{PAWN, KNIGHT, BISHOP, QUEEN, ROOK, KING};
@@ -41,7 +41,7 @@ pub struct BoardState {
     castle_memory: u64,
 
     // The square the pawn passed over. 0 for not applicable
-    en_passant_square: u64
+    en_passant_square: u64,
 }
 
 impl BoardState {
@@ -95,7 +95,7 @@ pub struct Move {
     // Is this move a castle?
     castle_flag: bool,
 
-    moving_player: Player
+    moving_player: Player,
 }
 
 
@@ -104,7 +104,7 @@ pub struct Chess {
     board: BoardState,
     // Move, castle memory and en passant square after move.. todo: Change to before move for easier undo
     history: Vec<(Move, u64, u64)>,
-    move_tables: Box<MoveTables>
+    move_tables: Box<MoveTables>,
 }
 
 impl Chess {
@@ -133,7 +133,7 @@ impl Chess {
         let checkers = self.get_checkers();
         if checkers != 0 {
             if checkers.count_ones() > 1 {
-                return (king_danger_squares, checkers, 0)
+                return (king_danger_squares, checkers, 0);
             }
             push_mask = self.move_tables.get_ray(index(king_place), index(checkers))
         } else {
@@ -161,7 +161,7 @@ impl Chess {
                     eaten_loc: 0,
                     castle_memory: self.board.castle_memory & !king_place,
                     castle_flag: true,
-                    moving_player: self.current_player
+                    moving_player: self.current_player,
                 })
             }
 
@@ -178,7 +178,7 @@ impl Chess {
                     eaten_loc: 0,
                     castle_memory: self.board.castle_memory & !king_place,
                     castle_flag: true,
-                    moving_player: self.current_player
+                    moving_player: self.current_player,
                 })
             }
         }
@@ -246,9 +246,8 @@ impl Chess {
                         eaten_loc: eaten,
                         castle_memory: self.board.castle_memory,
                         castle_flag: false,
-                        moving_player: self.current_player
+                        moving_player: self.current_player,
                     })
-
                 }
             }
         }
@@ -273,19 +272,24 @@ impl Chess {
     fn add_moves(&self, possible_moves: &mut Vec<Move>, from: u64, to_options: u64, piece_type: PieceType) {
         for to in iter_place(to_options) {
             let (eaten_loc, eaten_type) = self.board.type_at(to).map(|x| (to, x.1)).unwrap_or((0, PAWN));
-            possible_moves.push(Move {
-                from,
-                to,
-                start_type: piece_type,
-                end_type: piece_type,
-                eaten_type,
-                eaten_loc,
-                castle_memory: self.board.castle_memory & !from,
-                castle_flag: false,
-                moving_player: self.current_player
-            })
+            let mut types = vec![piece_type];
+            if piece_type == PAWN && (index(to) / 8) % 7 == 0 {
+                types = vec![QUEEN, ROOK, BISHOP, KNIGHT];
+            }
+            for new_type in types {
+                possible_moves.push(Move {
+                    from,
+                    to,
+                    start_type: piece_type,
+                    end_type: new_type,
+                    eaten_type,
+                    eaten_loc,
+                    castle_memory: self.board.castle_memory & !from,
+                    castle_flag: false,
+                    moving_player: self.current_player,
+                })
+            }
         }
-
     }
 }
 
@@ -298,10 +302,10 @@ impl Game for Chess {
             board: BoardState {
                 piece_state: [[0; 6]; 2],
                 castle_memory: 0,
-                en_passant_square: 0
+                en_passant_square: 0,
             },
             history: vec![],
-            move_tables: Box::new(MoveTables::new())
+            move_tables: Box::new(MoveTables::new()),
         };
         chess.setup_new_game();
         chess
@@ -331,7 +335,6 @@ impl Game for Chess {
         for piece_type in [ROOK, KNIGHT, BISHOP, QUEEN, KING].iter() {
             *self.board.get_mut(PLAYER2, *piece_type) = self.board.get(PLAYER1, *piece_type) << (8 * 7)
         }
-
     }
 
     fn current_player(&self) -> Player {
@@ -465,5 +468,32 @@ impl Game for Chess {
             }
             println!();
         }
+    }
+}
+
+
+impl Scored for Chess {
+    type ScoreType = i32;
+    const MAX_INFINITY: Self::ScoreType = i32::MAX;
+    const MIN_INFINITY: Self::ScoreType = i32::MIN;
+    const MAX_SCORE: Self::ScoreType = 1000;
+    const NEUTRAL_SCORE: Self::ScoreType = 0;
+    const MIN_SCORE: Self::ScoreType = -1000;
+
+    fn get_score(&self) -> Self::ScoreType {
+        let mut score = Self::NEUTRAL_SCORE;
+        for piece_type in PieceType::all() {
+            let mult = match piece_type {
+                PAWN => 1,
+                KNIGHT => 3,
+                BISHOP => 3,
+                ROOK => 5,
+                QUEEN => 9,
+                KING => 100
+            };
+            score += mult * self.board.get(PLAYER1, piece_type).count_ones() as i32;
+            score -= mult * self.board.get(PLAYER2, piece_type).count_ones() as i32;
+        }
+        score
     }
 }
