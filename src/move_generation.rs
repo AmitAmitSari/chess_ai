@@ -148,7 +148,7 @@ impl MoveTables {
             PLAYER2 => 6
         };
 
-        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index as i32)) {
+        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index)) {
             if move_one & blockers == 0 {
                 res |= move_one;
                 if index / 8 == start_row {
@@ -167,7 +167,7 @@ impl MoveTables {
         let mut res = 0_u64;
 
         for dir in [Dir::NorthEast, Dir::NorthWest].iter() {
-            if let Some(diag_place) = player.dir(*dir).mv(index_to_place(index as i32)) {
+            if let Some(diag_place) = player.dir(*dir).mv(index_to_place(index)) {
                 res |= diag_place
             }
         }
@@ -185,10 +185,10 @@ impl MoveTables {
         for piece_type in PieceType::all() {
             for index in iter_index(board.get(other, piece_type)) {
                 if piece_type == PAWN {
-                    king_danger |= self.get_pawn_captures(other, index as usize, !0);
+                    king_danger |= self.get_pawn_captures(other, index, !0);
                 }
                 else {
-                    king_danger |= self.get_moves(index as usize, other, piece_type, occ_no_king);
+                    king_danger |= self.get_moves(index, other, piece_type, occ_no_king);
                 }
             }
         }
@@ -219,20 +219,20 @@ impl MoveTables {
     }
 
     fn _init_bishop_masks(&mut self) {
-        for index in 0_i32..64 {
-            self.bishop_masks[index as usize] |= _ray(index, Dir::NorthEast, 1);
-            self.bishop_masks[index as usize] |= _ray(index, Dir::NorthWest, 1);
-            self.bishop_masks[index as usize] |= _ray(index, Dir::SouthEast, 1);
-            self.bishop_masks[index as usize] |= _ray(index, Dir::SouthWest, 1);
+        for index in 0..64 {
+            self.bishop_masks[index] |= _ray(index, Dir::NorthEast, 1);
+            self.bishop_masks[index] |= _ray(index, Dir::NorthWest, 1);
+            self.bishop_masks[index] |= _ray(index, Dir::SouthEast, 1);
+            self.bishop_masks[index] |= _ray(index, Dir::SouthWest, 1);
         }
     }
 
     fn _init_rook_masks(&mut self) {
-        for index in 0_i32..64 {
-            self.rook_masks[index as usize] |= _ray(index, Dir::North, 1);
-            self.rook_masks[index as usize] |= _ray(index, Dir::East, 1);
-            self.rook_masks[index as usize] |= _ray(index, Dir::West, 1);
-            self.rook_masks[index as usize] |= _ray(index, Dir::South, 1);
+        for index in 0..64 {
+            self.rook_masks[index] |= _ray(index, Dir::North, 1);
+            self.rook_masks[index] |= _ray(index, Dir::East, 1);
+            self.rook_masks[index] |= _ray(index, Dir::West, 1);
+            self.rook_masks[index] |= _ray(index, Dir::South, 1);
         }
     }
 
@@ -241,7 +241,7 @@ impl MoveTables {
             for blocker_index in 0..1<<_BISHOP_INDEX_BITS[index] {
                 let blockers = MoveTables::_create_blockers_from_index(blocker_index as i32, self.bishop_masks[index]);
                 let key = (blockers.wrapping_mul(_BISHOP_MAGICS[index])) >> (64 - _BISHOP_INDEX_BITS[index]);
-                self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index as i32, blockers);
+                self.bishop_table[index][key as usize] = MoveTables::_bishop_moves_slow(index, blockers);
             }
         }
     }
@@ -251,7 +251,7 @@ impl MoveTables {
             for blocker_index in 0..1<<_ROOK_INDEX_BITS[index] {
                 let blockers = MoveTables::_create_blockers_from_index(blocker_index as i32, self.rook_masks[index]);
                 let key = (blockers.wrapping_mul(_ROOK_MAGICS[index])) >> (64 - _ROOK_INDEX_BITS[index]);
-                self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index as i32, blockers);
+                self.rook_table[index][key as usize] = MoveTables::_rook_moves_slow(index, blockers);
             }
         }
     }
@@ -264,7 +264,7 @@ impl MoveTables {
                     if dx.abs() != dy.abs() {
                         let (nx, ny) = (x + dx, y + dy);
                         if 0 <= nx && nx < 8 && 0 <= ny && ny < 8 {
-                            self.knight_masks[i as usize] |= index_to_place(coord_to_index((nx, ny)));
+                            self.knight_masks[i] |= index_to_place(coord_to_index((nx, ny)));
                         }
                     }
                 }
@@ -276,7 +276,7 @@ impl MoveTables {
         for index in 0..64 {
             for dir in Dir::all() {
                 if let Some(m) = dir.mv(index_to_place(index)) {
-                    self.king_masks[index as usize] |= m;
+                    self.king_masks[index] |= m;
                 }
             }
         }
@@ -285,12 +285,12 @@ impl MoveTables {
     fn _init_rays(&mut self) {
         for dir in Dir::all() {
             for index in 0..64 {
-                self.rays[dir as usize][index] = ray(index as i32, dir);
+                self.rays[dir as usize][index] = ray(index, dir);
             }
         }
     }
 
-    fn _bishop_moves_slow(index: i32, blockers: u64) -> u64 {
+    fn _bishop_moves_slow(index: usize, blockers: u64) -> u64 {
         let mut res = 0_u64;
 
         res |= ray_until_blocker(index, blockers, Dir::NorthWest);
@@ -301,7 +301,7 @@ impl MoveTables {
         res
     }
 
-    fn _rook_moves_slow(index: i32, blockers: u64) -> u64 {
+    fn _rook_moves_slow(index: usize, blockers: u64) -> u64 {
         let mut res = 0_u64;
 
         res |= ray_until_blocker(index, blockers, Dir::North);

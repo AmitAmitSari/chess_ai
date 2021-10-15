@@ -109,7 +109,7 @@ pub struct Chess {
 
 impl Chess {
     pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
-        let (from_index, to_index): (i32, i32) = match index(king_end_location) {
+        let (from_index, to_index): (usize, usize) = match index(king_end_location) {
             x if x == 1 => (0, 2),
             x if x == 5 => (7, 4),
             x if x == 62 => (63, 61),
@@ -123,7 +123,7 @@ impl Chess {
         // Return (king_danger_squares, checkers, push_mask)
         let king_place = self.board.get(self.current_player, KING);
         let king_danger_squares = self.move_tables.get_king_danger_squares(&self.board, self.current_player);
-        let king_moves = self.move_tables.get_king_moves(index(king_place) as usize)
+        let king_moves = self.move_tables.get_king_moves(index(king_place))
             & !self.board.occupancy(self.current_player)
             & !king_danger_squares;
         let mut push_mask: u64 = !0;
@@ -135,7 +135,7 @@ impl Chess {
             if checkers.count_ones() > 1 {
                 return (king_danger_squares, checkers, 0)
             }
-            push_mask = self.move_tables.get_ray(index(king_place) as usize, index(checkers) as usize)
+            push_mask = self.move_tables.get_ray(index(king_place), index(checkers))
         } else {
             self.add_castle_moves(possible_moves, checkers, king_danger_squares);
         }
@@ -150,7 +150,7 @@ impl Chess {
         let cur_player_index = self.current_player as usize;
 
         if checkers == 0 && self.board.castle_memory & KING_PLACES[cur_player_index] != 0 {
-            let mut clear = self.move_tables.get_ray(index(king_place) as usize, index(KINGSIDE_ROOKS[cur_player_index]) as usize) & (king_danger | occ);
+            let mut clear = self.move_tables.get_ray(index(king_place), index(KINGSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
             if clear == 0 && self.board.castle_memory & KINGSIDE_ROOKS[cur_player_index] != 0 {
                 possible_moves.push(Move {
                     from: king_place,
@@ -166,8 +166,8 @@ impl Chess {
             }
 
 
-            clear = self.move_tables.get_ray(index(king_place) as usize, index(QUEENSIDE_ROOKS[cur_player_index]) as usize) & (king_danger | occ);
-            clear |= self.move_tables.get_rook_moves(index(QUEENSIDE_ROOKS[cur_player_index]) as usize, king_place) & occ;
+            clear = self.move_tables.get_ray(index(king_place), index(QUEENSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
+            clear |= self.move_tables.get_rook_moves(index(QUEENSIDE_ROOKS[cur_player_index]), king_place) & occ;
             if clear == 0 && self.board.castle_memory & QUEENSIDE_ROOKS[cur_player_index] != 0 {
                 possible_moves.push(Move {
                     from: king_place,
@@ -190,7 +190,7 @@ impl Chess {
         let my_occ = self.board.occupancy(self.current_player);
         let enemy_occ = self.board.occupancy(enemy);
         let occ = my_occ | enemy_occ;
-        let king_index = index(self.board.get(self.current_player, KING)) as usize;
+        let king_index = index(self.board.get(self.current_player, KING));
 
         let enemy_rooks = self.board.get(enemy, ROOK) | self.board.get(enemy, QUEEN);
         let enemy_bishops = self.board.get(enemy, BISHOP) | self.board.get(enemy, QUEEN);
@@ -201,11 +201,11 @@ impl Chess {
         pinners |= self.move_tables.get_bishop_moves(king_index, enemy_occ) & enemy_bishops;
 
         for i in iter_index(pinners) {
-            let pin = self.move_tables.get_ray(king_index, i as usize) & my_occ;
+            let pin = self.move_tables.get_ray(king_index, i) & my_occ;
             if pin.count_ones() == 1 {
-                let pin_space = index_to_place(i) | self.move_tables.get_ray(king_index, i as usize);
+                let pin_space = index_to_place(i) | self.move_tables.get_ray(king_index, i);
                 let (_, piece_type) = self.board.type_at(pin).unwrap();
-                let moves = self.move_tables.get_moves(index(pin) as usize, self.current_player, piece_type, occ)
+                let moves = self.move_tables.get_moves(index(pin), self.current_player, piece_type, occ)
                     & pin_space & (capture_mask | push_mask) & !my_occ;
 
 
@@ -219,18 +219,18 @@ impl Chess {
 
     fn add_en_passant_captures(&self, possible_moves: &mut Vec<Move>, capture_mask: u64, push_mask: u64, pinned: u64) {
         if self.board.en_passant_square != 0 {
-            let king_index = index(self.board.get(self.current_player, KING)) as usize;
+            let king_index = index(self.board.get(self.current_player, KING));
 
-            let eaten = self.move_tables.get_pawn_moves(self.current_player.other(), index(self.board.en_passant_square) as usize, 0);
+            let eaten = self.move_tables.get_pawn_moves(self.current_player.other(), index(self.board.en_passant_square), 0);
             if (eaten & capture_mask) | (self.board.en_passant_square & push_mask) != 0 {
-                let pawns = self.move_tables.get_pawn_captures(self.current_player.other(), index(self.board.en_passant_square) as usize, self.board.get(self.current_player, PAWN));
+                let pawns = self.move_tables.get_pawn_captures(self.current_player.other(), index(self.board.en_passant_square), self.board.get(self.current_player, PAWN));
                 for i in iter_index(pawns) {
                     // Check pawn isn't pinned. Or is pinned in the right direction.
-                    if (index_to_place(i) & pinned != 0) && self.move_tables.get_ray(king_index, index(self.board.en_passant_square) as usize) & index_to_place(i) != 0 {
+                    if (index_to_place(i) & pinned != 0) && self.move_tables.get_ray(king_index, index(self.board.en_passant_square)) & index_to_place(i) != 0 {
                         continue;
                     }
                     // Check there is no discovered check from two pawn disappearing from a row.
-                    if king_index / 8 == (i / 8) as usize {
+                    if king_index / 8 == (i / 8) {
                         let no_pawn_occ = self.board.all_occupancy() & !eaten & !index_to_place(i);
                         if self.move_tables.get_rook_moves(king_index, no_pawn_occ) & self.board.get(self.current_player.other(), ROOK) != 0 {
                             continue;
@@ -261,11 +261,11 @@ impl Chess {
         let enemy = self.current_player.other();
         let occ = self.board.all_occupancy();
 
-        checkers |= self.move_tables.get_rook_moves(king_index as usize, occ) & (self.board.get(enemy, QUEEN) | self.board.get(enemy, ROOK));
-        checkers |= self.move_tables.get_bishop_moves(king_index as usize, occ) & (self.board.get(enemy, QUEEN) | self.board.get(enemy, BISHOP));
-        checkers |= self.move_tables.get_knight_moves(king_index as usize) & self.board.get(enemy, KNIGHT);
+        checkers |= self.move_tables.get_rook_moves(king_index, occ) & (self.board.get(enemy, QUEEN) | self.board.get(enemy, ROOK));
+        checkers |= self.move_tables.get_bishop_moves(king_index, occ) & (self.board.get(enemy, QUEEN) | self.board.get(enemy, BISHOP));
+        checkers |= self.move_tables.get_knight_moves(king_index) & self.board.get(enemy, KNIGHT);
 
-        checkers |= self.move_tables.get_pawn_captures(self.current_player, king_index as usize, self.board.get(enemy, PAWN));
+        checkers |= self.move_tables.get_pawn_captures(self.current_player, king_index, self.board.get(enemy, PAWN));
 
         checkers
     }
@@ -357,7 +357,7 @@ impl Game for Chess {
         let my_occ = self.board.occupancy(self.current_player);
         for p in iter_place(can_move) {
             let (_, piece_type) = self.board.type_at(p).unwrap();
-            let moves = self.move_tables.get_moves(index(p) as usize, self.current_player, piece_type, blockers)
+            let moves = self.move_tables.get_moves(index(p), self.current_player, piece_type, blockers)
                 & (checkers | push_mask) & !my_occ;
             self.add_moves(&mut possible_moves, p, moves, piece_type);
         }

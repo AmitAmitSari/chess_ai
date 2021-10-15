@@ -57,13 +57,13 @@ pub struct IndexIterator {
 }
 
 impl Iterator for IndexIterator {
-    type Item = i32;
+    type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
         return if self.cur == 0 {
             None
         } else {
-            let res = Some(self.cur.trailing_zeros() as i32);
+            let res = Some(self.cur.trailing_zeros() as usize);
             self.cur &= self.cur - 1;
             res
         }
@@ -96,20 +96,16 @@ pub fn iter_place(board: u64) -> PlaceIterator {
     PlaceIterator { cur: board }
 }
 
-pub fn index_to_place(index: i32) -> u64 {
+pub fn index_to_place(index: usize) -> u64 {
     return 1_u64 << index;
 }
 
-pub fn index(place: u64) -> i32 {
-    place.trailing_zeros() as i32
-}
+pub fn index(place: u64) -> usize { place.trailing_zeros() as usize }
 
-pub fn coord_to_index(coord: (i32, i32)) -> i32 {
-    return coord.1 * 8 + coord.0
-}
+pub fn coord_to_index(coord: (i32, i32)) -> usize { (coord.1 * 8 + coord.0) as usize }
 
-pub fn index_to_coord(index: i32) -> (i32, i32) {
-    return (index % 8, index / 8)
+pub fn index_to_coord(index: usize) -> (i32, i32) {
+    return (index as i32 % 8, index as i32 / 8)
 }
 
 pub fn place_to_coord(place: u64) -> (i32, i32) {
@@ -117,18 +113,19 @@ pub fn place_to_coord(place: u64) -> (i32, i32) {
 }
 
 
-pub fn ray(index: i32, dir: Dir) -> u64 {
+pub fn ray(index: usize, dir: Dir) -> u64 {
     _ray(index, dir, 0)
 }
 
-pub fn _ray(index: i32, dir: Dir, edge_buffer: i32) -> u64 {
+pub fn _ray(index: usize, dir: Dir, edge_buffer: i32) -> u64 {
     // not including index.
     let start = index_to_place(index);
+    let i = index as i32;
     let (n, s, e, w) = (
-        (index / 8) - edge_buffer,
-        7 - (index / 8) - edge_buffer,
-        7 - (index % 8) - edge_buffer,
-        (index % 8) - edge_buffer
+        (i / 8) - edge_buffer,
+        7 - (i / 8) - edge_buffer,
+        7 - (i % 8) - edge_buffer,
+        (i % 8) - edge_buffer
     );
     match dir {
         Dir::North => __ray(start, n, |x| x >> 8),
@@ -151,7 +148,7 @@ fn __ray(mut start: u64, cnt: i32, func: fn(u64) -> u64) -> u64 {
     ray
 }
 
-pub fn ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
+pub fn ray_until_blocker(index: usize, blockers: u64, dir: Dir) -> u64 {
     // not including index, including blocker.
     let mut res = ray(index, dir);
     if res & blockers != 0 {
@@ -165,7 +162,7 @@ pub fn ray_until_blocker(index:i32, blockers: u64, dir: Dir) -> u64 {
             Dir::South |
             Dir::East => (res & blockers).trailing_zeros(),
         };
-        res &= !(ray(first_blocker_index as i32, dir))
+        res &= !(ray(first_blocker_index as usize, dir))
     }
     res
 }
