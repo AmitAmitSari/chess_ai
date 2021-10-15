@@ -10,43 +10,84 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
     where Y: Game + Scored
 {
     let mut rng = rand::thread_rng();
-    min_max(game, depth, &mut rng).0
-}
+    let mut best_moves = vec![];
+    let mut score;
+    let mut a = Y::MIN_INFINITY;
+    let mut b = Y::MAX_INFINITY;
 
-fn min_max<Y>(game: &mut Y, depth: i32, rng: &mut ThreadRng) -> (Option<<Y as Game>::MoveType>, Y::ScoreType)
-    where Y: Game + Scored
-{
-    if depth == 0 || game.game_state() != PLAYING {
-        return (None, game.get_score());
+    if game.current_player() == PLAYER1 {
+        score = Y::MIN_INFINITY;
+        for m in game.possible_moves() {
+            game.do_move(m);
+            let move_score = alpha_beta(game, depth - 1, a, b);
+            let m_ = game.undo_move();
+            if move_score >= score {
+                if move_score > score {
+                    println!("{}, {}", m_, move_score);
+                    best_moves.clear();
+                }
+                best_moves.push(m_);
+                score = move_score
+            }
+            a = max(a, score);
+        }
+    } else {
+        score = Y::MAX_INFINITY;
+        for m in game.possible_moves() {
+            game.do_move(m);
+            let move_score = alpha_beta(game, depth - 1, a, b);
+            let m_ = game.undo_move();
+            if move_score <= score {
+                if move_score < score {
+                    println!("{}, {}", m_, move_score);
+                    best_moves.clear();
+                }
+                best_moves.push(m_);
+                score = move_score
+            }
+            b = min(b, score);
+        }
     }
 
-    let mut score = if game.current_player() == PLAYER1 { Y::MIN_INFINITY } else { Y::MAX_INFINITY };
-    let func = if game.current_player() == PLAYER1 { max } else { min };
-    let mut best_moves: Vec<<Y as Game>::MoveType> = vec![];
-
-    for m in game.possible_moves() {
-        game.do_move(m);
-        let move_score = min_max(game, depth - 1, rng).1;
-        let m_ = game.undo_move();
-
-        if func(score, move_score) != score {
-            if depth == 4 {
-                println!("{}, {}", m_, move_score)
-            }
-            if score != move_score {
-                best_moves.clear();
-                score = func(score, move_score);
-            }
-        }
-        if score == move_score {
-            best_moves.push(m_);
-        }
-    }
-
-    let i = (0..best_moves.len()).choose(rng);
+    let i = (0..best_moves.len()).choose(&mut rng);
 
     let m = i.map(|x| best_moves.swap_remove(x));
 
-    return (m, score);
+    return m;
+}
+
+fn alpha_beta<Y>(game: &mut Y, depth: i32, mut a: Y::ScoreType, mut b: Y::ScoreType) -> Y::ScoreType
+    where Y: Game + Scored
+{
+    if depth == 0 {
+        return game.get_score();
+    }
+
+    let mut score;
+
+    if game.current_player() == PLAYER1 {
+        score = Y::MIN_INFINITY;
+        for m in game.possible_moves() {
+            game.do_move(m);
+            score = max(score, alpha_beta(game, depth - 1, a, b));
+            game.undo_move();
+            if score >= b {
+                break;
+            }
+            a = max(a, score);
+        }
+    } else {
+        score = Y::MAX_INFINITY;
+        for m in game.possible_moves() {
+            game.do_move(m);
+            score = min(score, alpha_beta(game, depth - 1, a, b));
+            game.undo_move();
+            if score <= a {
+                break;
+            }
+            b = min(b, score);
+        }
+    }
+    return score;
 }
 
