@@ -40,7 +40,7 @@ impl Player {
 
 static KING_PLACES: [u64; 2] = [1 << 3, 1 << (63 - 4)];
 static KINGSIDE_ROOKS: [u64; 2] = [1, 1 << (63 - 7)];
-static QUEENSIDE_ROOKS: [u64; 2] = [1 << 7, 63];
+static QUEENSIDE_ROOKS: [u64; 2] = [1 << 7, 1 << 63];
 
 // White is on top.
 // The least significant bit is top left. going over the board rows first.
@@ -331,7 +331,7 @@ impl Chess {
 
 
             clear = self.move_tables.get_ray(index(king_place), index(QUEENSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
-            clear |= self.move_tables.get_rook_moves(index(QUEENSIDE_ROOKS[cur_player_index]), king_place) & occ;
+            clear |= self.move_tables.get_ray(index(QUEENSIDE_ROOKS[cur_player_index]), index(king_place)) & occ;
             if clear == 0 && self.board.castle_memory & QUEENSIDE_ROOKS[cur_player_index] & rook_board != 0 {
                 possible_moves.push(Move {
                     from: king_place,

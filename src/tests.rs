@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn test_position() {
         let mut chess = Chess::new();
-        chess.setup_fen_string("3k4/8/2r5/2Pp4/2K5/8/8/8 w - d6 0 0");
+        chess.setup_fen_string("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1");
 
         chess.console_draw();
         let depth = 1;
