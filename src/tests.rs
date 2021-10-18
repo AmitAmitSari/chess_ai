@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::chess_impl::Chess;
+    use crate::chess_impl::{Chess, Move, PieceType};
     use crate::two_player_game::Game;
 
     fn count_positions(chess: &mut Chess, depth: i32) -> usize {
@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn test_position() {
         let mut chess = Chess::new();
-        chess.setup_fen_string("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1");
+        chess.setup_fen_string("r2kQ2r/3p3p/n1qB3P/2P2P2/1p6/P4N2/P1P3PP/RN2R1K1 b - - 0 1");
 
         chess.console_draw();
         let depth = 4;
@@ -102,6 +102,16 @@ mod tests {
             assert_eq!(expected, actual);
         }
 
+    }
+
+    #[test]
+    fn test_move_to_string() {
+        let mut chess = Chess::new();
+        chess.setup_fen_string("8/4P3/8/1k6/8/8/8/5K2 w - - 0 1");
+        for m in chess.possible_moves() {
+            let sm = m.to_string();
+            println!("Move {}", sm)
+        }
     }
 
 }

@@ -119,7 +119,13 @@ fn place_to_letters(place: u64) -> String {
 
 impl Display for Move {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&(place_to_letters(self.from) + &place_to_letters(self.to)))
+        let mut res: String = String::new();
+        res += &(place_to_letters(self.from) + &place_to_letters(self.to));
+        if self.start_type != self.end_type {
+            res += ["p", "n", "b", "r", "q", "k"][self.end_type as usize];
+        }
+
+        f.write_str(&res)
     }
 }
 
