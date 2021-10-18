@@ -177,7 +177,7 @@ impl Chess {
 
         // En passant square
         if parts[3] != "-" {
-            let x = "abcdefgh".find(&parts[3][0..1]).unwrap() as i32;
+            let x = "hgfedcba".find(&parts[3][0..1]).unwrap() as i32;
             let y = "12345678".find(&parts[3][1..2]).unwrap() as i32;
             self.board.en_passant_square = index_to_place(coord_to_index((x, y)))
         } else {
@@ -300,7 +300,6 @@ impl Chess {
 
             let eaten = self.move_tables.get_pawn_moves(self.current_player.other(), index(self.board.en_passant_square), 0);
 
-            println!("{}, {}", king_index, index(eaten));
             if (eaten & capture_mask) | (self.board.en_passant_square & push_mask) != 0 {
                 let pawns = self.move_tables.get_pawn_captures(self.current_player.other(), index(self.board.en_passant_square), self.board.get(self.current_player, PAWN));
                 for i in iter_index(pawns) {
