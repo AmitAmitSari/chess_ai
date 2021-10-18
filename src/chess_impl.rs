@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
 use crate::two_player_game::{Game, Player, GameState, Scored};
 use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place, ray_until_blocker};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
@@ -108,6 +109,19 @@ pub struct Move {
     moving_player: Player,
 }
 
+fn place_to_letters(place: u64) -> String {
+    let (x, y) = place_to_coord(place);
+    let lett: String = "hgfedcba".chars().map(|c| c.to_string()).nth(x as usize).unwrap();
+    let num: String = "12345678".chars().map(|c| c.to_string()).nth(y as usize).unwrap();
+    return lett + &num;
+}
+
+
+impl Display for Move {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&(place_to_letters(self.from) + &place_to_letters(self.to)))
+    }
+}
 
 pub struct Chess {
     current_player: Player,
@@ -185,6 +199,78 @@ impl Chess {
         }
     }
 
+    pub fn get_fen_string(&self) -> String {
+        let mut res = &mut "".to_owned();
+
+        let info_to_char = [["P", "N", "B", "R", "Q", "K"], ["p", "n", "b", "r", "q", "k"]];
+
+        // Pieces
+        for y in (0..8).rev() {
+            let mut empty = 0;
+
+            for x in (0..8).rev() {
+                let char = self.board.type_at(index_to_place(coord_to_index((x, y)))).map(|(p, t)| info_to_char[p as usize][t as usize]);
+                match char {
+                    None => {
+                        empty += 1
+                    }
+                    Some(c) => {
+                        if empty != 0 {
+                            *res += &empty.to_string();
+                            empty = 0;
+                        }
+
+                        *res += c;
+                    }
+                }
+            }
+
+            if empty != 0 {
+                *res += &empty.to_string();
+
+            }
+            if y != 0 {
+                *res += "/"
+            }
+        }
+
+        // Next player
+        *res += if self.current_player == PLAYER1 { " w " } else { " b " };
+
+        // Castle rights
+        let castle_part = &mut "".to_owned();
+        for (i, k, q) in [(0, "K", "Q"), (1, "k", "Q")].iter().copied() {
+            if self.board.castle_memory & KING_PLACES[i] != 0 {
+                if self.board.castle_memory & KINGSIDE_ROOKS[i] != 0 {
+                    *castle_part += k;
+                }
+                if self.board.castle_memory & QUEENSIDE_ROOKS[i] != 0 {
+                    *castle_part += q;
+                }
+            }
+        }
+        if castle_part == "" {
+            *castle_part += &" -";
+        }
+        *res += castle_part;
+        *res += &" ";
+
+        // en passant
+        if self.board.en_passant_square != 0 {
+            *res += &place_to_letters(self.board.en_passant_square);
+        } else {
+            *res += "-";
+        }
+
+        // bogus half-turn counter
+        *res += " 0 ";
+
+        // fullturn counter
+        *res += &(self.history.len() / 2).to_string();
+
+        res.to_string()
+    }
+
     pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
         let (from_index, to_index): (usize, usize) = match index(king_end_location) {
             x if x == 1 => (0, 2),
@@ -222,13 +308,14 @@ impl Chess {
 
     fn add_castle_moves(&self, possible_moves: &mut Vec<Move>, checkers: u64, king_danger: u64) {
         let king_place = self.board.get(self.current_player, KING);
+        let rook_board = self.board.get(self.current_player, ROOK);
 
         let occ = self.board.all_occupancy();
         let cur_player_index = self.current_player as usize;
 
         if checkers == 0 && self.board.castle_memory & KING_PLACES[cur_player_index] != 0 {
             let mut clear = self.move_tables.get_ray(index(king_place), index(KINGSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
-            if clear == 0 && self.board.castle_memory & KINGSIDE_ROOKS[cur_player_index] != 0 {
+            if clear == 0 && self.board.castle_memory & KINGSIDE_ROOKS[cur_player_index] & rook_board != 0 {
                 possible_moves.push(Move {
                     from: king_place,
                     to: king_place >> 2,
@@ -245,7 +332,7 @@ impl Chess {
 
             clear = self.move_tables.get_ray(index(king_place), index(QUEENSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
             clear |= self.move_tables.get_rook_moves(index(QUEENSIDE_ROOKS[cur_player_index]), king_place) & occ;
-            if clear == 0 && self.board.castle_memory & QUEENSIDE_ROOKS[cur_player_index] != 0 {
+            if clear == 0 && self.board.castle_memory & QUEENSIDE_ROOKS[cur_player_index] & rook_board != 0 {
                 possible_moves.push(Move {
                     from: king_place,
                     to: king_place << 2,

@@ -19,18 +19,7 @@ mod tests;
 
 
 
-fn place_to_letters(place: u64) -> String {
-    let (x, y) = place_to_coord(place);
-    let lett: String = "hgfedcba".chars().map(|c| c.to_string()).nth(x as usize).unwrap();
-    let num: String = "12345678".chars().map(|c| c.to_string()).nth(y as usize).unwrap();
-    return lett + &num;
-}
 
-impl Display for Move {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&(place_to_letters(self.from) + &place_to_letters(self.to)))
-    }
-}
 
 fn print_u64(map: u64) {
     for y in 0..8 {
