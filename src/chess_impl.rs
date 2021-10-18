@@ -250,7 +250,7 @@ impl Chess {
             }
         }
         if castle_part == "" {
-            *castle_part += &" -";
+            *castle_part += &"-";
         }
         *res += castle_part;
         *res += &" ";
@@ -391,7 +391,7 @@ impl Chess {
                 let pawns = self.move_tables.get_pawn_captures(self.current_player.other(), index(self.board.en_passant_square), self.board.get(self.current_player, PAWN));
                 for i in iter_index(pawns) {
                     // Check pawn isn't pinned. Or is pinned in the right direction.
-                    if (index_to_place(i) & pinned != 0) && self.move_tables.get_ray(king_index, index(self.board.en_passant_square)) & index_to_place(i) != 0 {
+                    if (index_to_place(i) & pinned != 0) && self.move_tables.get_ray(king_index, index(self.board.en_passant_square)) & index_to_place(i) == 0 {
                         continue;
                     }
                     // Check there is no discovered check from two pawn disappearing from a row.

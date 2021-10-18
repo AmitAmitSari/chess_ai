@@ -26,10 +26,10 @@ mod tests {
     #[test]
     fn test_position() {
         let mut chess = Chess::new();
-        chess.setup_fen_string("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPPQNnPP/RNB1K2R b KQ - 0 1");
+        chess.setup_fen_string("3k4/8/2r5/2Pp4/2K5/8/8/8 w - d6 0 0");
 
         chess.console_draw();
-        let depth = 2;
+        let depth = 1;
         for i in 1..depth+1 {
             println!("{}", count_positions(&mut chess, i));
         }
@@ -37,13 +37,10 @@ mod tests {
         for m in chess.possible_moves() {
             let sm = m.to_string();
             chess.do_move(m);
-            for mm in chess.possible_moves() {
-                println!("Moves: {} {}", sm, mm);
-            }
             let fen = chess.get_fen_string();
             let cnt = count_positions(&mut chess, depth - 1);
             let m_ = chess.undo_move();
-            // println!("Move {} {} '{}'", m_, cnt, fen)
+            println!("Move {} {} '{}'", m_, cnt, fen)
         }
 
     }
