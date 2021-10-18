@@ -14,22 +14,10 @@ mod xo_impl;
 mod chess_impl;
 mod bit_help;
 mod move_generation;
+mod tests;
 
 
-fn count_positions(chess: &mut Chess, depth: i32) -> usize {
-    if depth == 1 {
-        return chess.possible_moves().len();
-    }
 
-    let moves = chess.possible_moves();
-    let mut res = 0;
-    for m in moves {
-        chess.do_move(m);
-        res += count_positions(chess, depth - 1);
-        chess.undo_move();
-    }
-    res
-}
 
 fn place_to_letters(place: u64) -> String {
     let (x, y) = place_to_coord(place);

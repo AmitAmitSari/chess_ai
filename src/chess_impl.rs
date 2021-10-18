@@ -299,6 +299,8 @@ impl Chess {
             let king_index = index(self.board.get(self.current_player, KING));
 
             let eaten = self.move_tables.get_pawn_moves(self.current_player.other(), index(self.board.en_passant_square), 0);
+
+            println!("{}, {}", king_index, index(eaten));
             if (eaten & capture_mask) | (self.board.en_passant_square & push_mask) != 0 {
                 let pawns = self.move_tables.get_pawn_captures(self.current_player.other(), index(self.board.en_passant_square), self.board.get(self.current_player, PAWN));
                 for i in iter_index(pawns) {
@@ -512,13 +514,19 @@ impl Game for Chess {
     }
 
     fn console_draw(&self) {
-        for y in 0..8 {
-            for x in 0..8 {
-                if let Some((player, piece_type)) = self.board.type_at(index_to_place(coord_to_index((x, y)))) {
+        for y in -2..8+2 {
+            for x in -4..(8+2)*2 {
+                if x % 2 != 0 {
+                    print!(" ");
+                }
+                else if y < 0 || y >= 8 || x / 2 < 0 || x / 2 >= 8 {
+                    print!("-")
+                }
+                else if let Some((player, piece_type)) = self.board.type_at(index_to_place(coord_to_index((x / 2, y)))) {
                     let info_to_char = [["P", "N", "B", "R", "Q", "K"], ["p", "n", "b", "r", "q", "k"]];
                     print!("{}", info_to_char[player as usize][piece_type as usize]);
                 } else {
-                    print!(" ");
+                    print!(".");
                 }
             }
             println!();
