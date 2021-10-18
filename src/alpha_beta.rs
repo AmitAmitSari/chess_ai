@@ -52,7 +52,7 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
     let i = (0..best_moves.len()).choose(&mut rng);
 
     let m = i.map(|x| best_moves.swap_remove(x));
-
+    eprintln!("Expected score: {}", score);
     return m;
 }
 
