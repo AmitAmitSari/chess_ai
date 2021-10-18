@@ -275,9 +275,9 @@ impl Chess {
         let (from_index, to_index): (usize, usize) = match index(king_end_location) {
             x if x == 1 => (0, 2),
             x if x == 5 => (7, 4),
-            x if x == 62 => (63, 61),
+            x if x == 61 => (63, 60),
             x if x == 57 => (56, 58),
-            _ => { panic!("Tried to castle to an invalid location!") }
+            x => { panic!("Tried to castle to an invalid location: {}", x) }
         };
         (index_to_place(from_index), index_to_place(to_index))
     }
