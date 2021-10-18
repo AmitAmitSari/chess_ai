@@ -26,10 +26,10 @@ mod tests {
     #[test]
     fn test_position() {
         let mut chess = Chess::new();
-        chess.setup_fen_string("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1");
+        chess.setup_fen_string("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1");
 
         chess.console_draw();
-        let depth = 1;
+        let depth = 4;
         for i in 1..depth+1 {
             println!("{}", count_positions(&mut chess, i));
         }

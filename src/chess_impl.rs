@@ -239,7 +239,7 @@ impl Chess {
 
         // Castle rights
         let castle_part = &mut "".to_owned();
-        for (i, k, q) in [(0, "K", "Q"), (1, "k", "Q")].iter().copied() {
+        for (i, k, q) in [(0, "K", "Q"), (1, "k", "q")].iter().copied() {
             if self.board.castle_memory & KING_PLACES[i] != 0 {
                 if self.board.castle_memory & KINGSIDE_ROOKS[i] != 0 {
                     *castle_part += k;
@@ -330,7 +330,7 @@ impl Chess {
             }
 
 
-            clear = self.move_tables.get_ray(index(king_place), index(QUEENSIDE_ROOKS[cur_player_index])) & (king_danger | occ);
+            clear = self.move_tables.get_ray(index(king_place), index(QUEENSIDE_ROOKS[cur_player_index]) - 1) & (king_danger | occ);
             clear |= self.move_tables.get_ray(index(QUEENSIDE_ROOKS[cur_player_index]), index(king_place)) & occ;
             if clear == 0 && self.board.castle_memory & QUEENSIDE_ROOKS[cur_player_index] & rook_board != 0 {
                 possible_moves.push(Move {
