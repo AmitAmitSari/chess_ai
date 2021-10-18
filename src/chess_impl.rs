@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::convert::TryFrom;
 use crate::two_player_game::{Game, Player, GameState, Scored};
 use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place, ray_until_blocker};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
@@ -16,6 +17,14 @@ impl PieceType {
     pub fn all() -> Copied<Iter<'static, PieceType>> {
         static ALL_PIECES: [PieceType; 6] = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING];
         return ALL_PIECES.iter().copied();
+    }
+}
+
+impl TryFrom<usize> for PieceType {
+    type Error = usize;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        PieceType::all().nth(value).map_or(Result::Err(value), |p| Result::Ok(p))
     }
 }
 
@@ -103,12 +112,79 @@ pub struct Move {
 pub struct Chess {
     current_player: Player,
     board: BoardState,
-    // Move, castle memory and en passant square after move.. todo: Change to before move for easier undo
     history: Vec<(Move, u64, u64)>,
     move_tables: Box<MoveTables>,
 }
 
 impl Chess {
+
+    pub fn setup_fen_string(&mut self, fen: &str) {
+
+        self.history.clear();
+
+        self.board.piece_state = [[0; 6]; 2];
+
+        let parts: Vec<&str> = fen.split(' ').collect();
+
+        // Pieces
+        let mut index = 64_usize;
+        for char in parts[0].chars() {
+            match char {
+                l if "pnbrqk".find(l).is_some() => {
+                    index -= 1;
+                    *self.board.get_mut(PLAYER2, PieceType::try_from("pnbrqk".find(l).unwrap()).unwrap()) |= index_to_place(index);
+
+                }
+                l if "PNBRQK".find(l).is_some() => {
+                    index -= 1;
+                    *self.board.get_mut(PLAYER1, PieceType::try_from("PNBRQK".find(l).unwrap()).unwrap()) |= index_to_place(index);
+                }
+                l if "12345678".find(l).is_some() => {
+                    index -= "12345678".find(l).unwrap() + 1
+                }
+                l if l == '/' => { }
+                l => {
+                    println!("Unexpected char in fen string, {}", l);
+                    panic!()
+                }
+            }
+        }
+
+        // next to move
+        match parts[1] {
+            l if l == "w" => {
+                self.current_player = PLAYER1;
+            }
+            l if l == "b" => {
+                self.current_player = PLAYER2
+            }
+            l => {
+                println!("Unexpected char as next player, {}", l);
+                panic!()
+            }
+        }
+
+        self.board.castle_memory = 0;
+
+        // castling
+        for (l, place, player) in [('K', KINGSIDE_ROOKS[0], 0), ('k', KINGSIDE_ROOKS[1], 1), ('Q', QUEENSIDE_ROOKS[0], 0), ('q', QUEENSIDE_ROOKS[1], 1)].iter().copied() {
+            if parts[2].contains(l) {
+                self.board.castle_memory |= place;
+                self.board.castle_memory |= KING_PLACES[player];
+
+            }
+        }
+
+        // En passant square
+        if parts[3] != "-" {
+            let x = "abcdefgh".find(&parts[3][0..1]).unwrap() as i32;
+            let y = "12345678".find(&parts[3][1..2]).unwrap() as i32;
+            self.board.en_passant_square = index_to_place(coord_to_index((x, y)))
+        } else {
+            self.board.en_passant_square = 0;
+        }
+    }
+
     pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
         let (from_index, to_index): (usize, usize) = match index(king_end_location) {
             x if x == 1 => (0, 2),
@@ -313,29 +389,7 @@ impl Game for Chess {
     }
 
     fn setup_new_game(&mut self) {
-        self.board.castle_memory = KING_PLACES[0] | KING_PLACES[1] | KINGSIDE_ROOKS[0] | KINGSIDE_ROOKS[1] | QUEENSIDE_ROOKS[0] | QUEENSIDE_ROOKS[1];
-        self.board.en_passant_square = 0;
-
-        self.history.clear();
-        self.current_player = Player::PLAYER1;
-
-        self.board.piece_state = [[0; 6]; 2];
-
-        // PAWNS
-        for i in 8..16 {
-            *self.board.get_mut(PLAYER1, PAWN) |= index_to_place(i);
-        }
-        *self.board.get_mut(PLAYER2, PAWN) |= self.board.get(PLAYER1, PAWN) << (8 * 5);
-
-        *self.board.get_mut(PLAYER1, ROOK) |= index_to_place(0) | index_to_place(7);
-        *self.board.get_mut(PLAYER1, KNIGHT) |= index_to_place(1) | index_to_place(6);
-        *self.board.get_mut(PLAYER1, BISHOP) |= index_to_place(2) | index_to_place(5);
-        *self.board.get_mut(PLAYER1, QUEEN) |= index_to_place(4);
-        *self.board.get_mut(PLAYER1, KING) |= index_to_place(3);
-
-        for piece_type in [ROOK, KNIGHT, BISHOP, QUEEN, KING].iter() {
-            *self.board.get_mut(PLAYER2, *piece_type) = self.board.get(PLAYER1, *piece_type) << (8 * 7)
-        }
+        self.setup_fen_string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
     fn current_player(&self) -> Player {

@@ -23,7 +23,7 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
             let m_ = game.undo_move();
             if move_score >= score {
                 if move_score > score {
-                    println!("{}, {}", m_, move_score);
+                    // println!("{}, {}", m_, move_score);
                     best_moves.clear();
                 }
                 best_moves.push(m_);
@@ -39,7 +39,7 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
             let m_ = game.undo_move();
             if move_score <= score {
                 if move_score < score {
-                    println!("{}, {}", m_, move_score);
+                    // println!("{}, {}", m_, move_score);
                     best_moves.clear();
                 }
                 best_moves.push(m_);
