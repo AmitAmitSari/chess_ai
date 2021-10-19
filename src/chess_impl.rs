@@ -297,7 +297,7 @@ impl Chess {
             & !king_danger_squares;
         let mut push_mask: u64 = !0;
 
-        self.add_moves(possible_moves, king_place, king_moves, KING);
+        self.add_moves(possible_moves, king_place, king_moves, KING, self.board.occupancy(self.current_player.other()));
 
         let checkers = self.get_checkers();
         if checkers != 0 {
@@ -379,7 +379,7 @@ impl Chess {
                     & pin_space & (capture_mask | push_mask) & !my_occ;
 
 
-                self.add_moves(possible_moves, pin, moves, piece_type);
+                self.add_moves(possible_moves, pin, moves, piece_type, enemy_occ);
                 pinned |= pin;
             }
         }
@@ -440,9 +440,13 @@ impl Chess {
         checkers
     }
 
-    fn add_moves(&self, possible_moves: &mut Vec<Move>, from: u64, to_options: u64, piece_type: PieceType) {
+    fn add_moves(&self, possible_moves: &mut Vec<Move>, from: u64, to_options: u64, piece_type: PieceType, enemy_occ: u64) {
         for to in iter_place(to_options) {
-            let (eaten_loc, eaten_type) = self.board.type_at(to).map_or((0, PAWN), |x| (to, x.1));
+            let (eaten_loc, eaten_type) = if enemy_occ & to != 0 {
+                self.board.type_at(to).map_or((0, PAWN), |x| (to, x.1))
+            } else {
+                (0, PAWN)
+            };
             if piece_type == PAWN && (index(to) / 8) % 7 == 0 {
                 for end_type in [QUEEN, ROOK, BISHOP, KNIGHT].iter().cloned() {
                     possible_moves.push(Move {
@@ -502,8 +506,7 @@ impl Game for Chess {
     }
 
     fn possible_moves(&self) -> Vec<Self::MoveType> {
-        let mut possible_moves = vec![];
-        possible_moves.reserve(80);
+        let mut possible_moves = Vec::with_capacity(50);
 
         let (king_danger, checkers, push_mask) = self.add_king_moves(&mut possible_moves);
 
@@ -515,14 +518,15 @@ impl Game for Chess {
 
         self.add_en_passant_captures(&mut possible_moves, checkers, push_mask, pinned);
 
-        let can_move = self.board.occupancy(self.current_player) & !pinned & !self.board.get(self.current_player, KING);
-        let blockers = self.board.all_occupancy();
         let my_occ = self.board.occupancy(self.current_player);
+        let can_move = my_occ & !pinned & !self.board.get(self.current_player, KING);
+        let blockers = self.board.all_occupancy();
+        let enemy_occ = blockers & !my_occ;
         for p in iter_place(can_move) {
             let (_, piece_type) = self.board.type_at(p).unwrap();
             let moves = self.move_tables.get_moves(index(p), self.current_player, piece_type, blockers)
                 & (checkers | push_mask) & !my_occ;
-            self.add_moves(&mut possible_moves, p, moves, piece_type);
+            self.add_moves(&mut possible_moves, p, moves, piece_type, enemy_occ);
         }
 
         // Find king moves:

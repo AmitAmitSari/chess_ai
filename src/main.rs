@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::time::Instant;
 use text_io::read;
 
 use crate::two_player_game::{Game, GameState, Player};
@@ -63,13 +64,16 @@ fn play_game(game: &mut Chess, player: Player) -> GameState {
 
 fn main() {
     let mut chess = Chess::new();
+    let mut turns = 0;
+    let start = Instant::now();
     loop {
-        println!("Looking for moves");
+        println!("At move: {}, took {:?}", turns, start.elapsed());
         let m = get_next_move(&mut chess, 6);
         match m {
             None => { break; }
             Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
         }
+        turns += 1;
     }
 
     // for &move_str in [""; 0].iter(){

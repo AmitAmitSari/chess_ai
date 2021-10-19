@@ -143,21 +143,16 @@ impl MoveTables {
 
     pub fn get_pawn_moves(&self, player: Player, index: usize, blockers: u64) -> u64 {
         let mut res = 0_u64;
-        let start_row = match player {
-            PLAYER1 => 1,
-            PLAYER2 => 6
+        let (start_row, row_diff) = match player {
+            PLAYER1 => (1, 2),
+            PLAYER2 => (6, -2)
         };
+        let dir = player.dir(Dir::North);
 
-        if let Some(move_one) = player.dir(Dir::North).mv(index_to_place(index)) {
-            if move_one & blockers == 0 {
-                res |= move_one;
-                if index / 8 == start_row {
-                    if let Some(move_two) = player.dir(Dir::North).mv(move_one) {
-                        if move_two & blockers == 0 {
-                            res |= move_two;
-                        }
-                    }
-                }
+        if let Some(move_one) = dir.mv(index_to_place(index)) {
+            res |= move_one & !blockers;
+            if res != 0 && index / 8 == start_row {
+                res |= index_to_place(index + (row_diff * 8) as usize) & !blockers;
             }
         }
         res
