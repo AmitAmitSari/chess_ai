@@ -5,21 +5,22 @@ use crate::two_player_game::Player::PLAYER1;
 use std::cmp::{max, min};
 use rand::rngs::ThreadRng;
 use rand::seq::{IteratorRandom, SliceRandom};
+use crate::chess_impl::Chess;
 
-pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
-    where Y: Game + Scored
+pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::MoveType>
 {
     let mut rng = rand::thread_rng();
     let mut best_moves = vec![];
     let mut score;
-    let mut a = Y::MIN_INFINITY;
-    let mut b = Y::MAX_INFINITY;
+    let mut a = Chess::MIN_INFINITY;
+    let mut b = Chess::MAX_INFINITY;
 
     if game.current_player() == PLAYER1 {
-        score = Y::MIN_INFINITY;
+        score = Chess::MIN_INFINITY;
         for m in game.possible_moves() {
+            let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b);
+            let move_score = alpha_beta(game, depth - 1, a, b, to);
             let m_ = game.undo_move();
             if move_score >= score {
                 if move_score > score {
@@ -32,10 +33,11 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
             a = max(a, score);
         }
     } else {
-        score = Y::MAX_INFINITY;
+        score = Chess::MAX_INFINITY;
         for m in game.possible_moves() {
+            let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b);
+            let move_score = alpha_beta(game, depth - 1, a, b, to);
             let m_ = game.undo_move();
             if move_score <= score {
                 if move_score < score {
@@ -56,20 +58,26 @@ pub fn get_next_move<Y>(game: &mut Y, depth: i32) -> Option<Y::MoveType>
     return m;
 }
 
-fn alpha_beta<Y>(game: &mut Y, depth: i32, mut a: Y::ScoreType, mut b: Y::ScoreType) -> Y::ScoreType
-    where Y: Game + Scored
+fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64) -> <Chess as Scored>::ScoreType
 {
-    if depth == 0 {
-        return game.get_score();
+    let mut possible_moves = game.possible_moves();
+
+    if depth <= 0 {
+        // Quiescence.
+        possible_moves.retain(|m| m.eaten_loc == last_to);
+        if possible_moves.len() == 0 {
+            return game.get_score();
+        }
     }
 
     let mut score;
 
     if game.current_player() == PLAYER1 {
-        score = Y::MIN_INFINITY;
-        for m in game.possible_moves() {
+        score = Chess::MIN_INFINITY;
+        for m in possible_moves {
+            let to = m.to;
             game.do_move(m);
-            score = max(score, alpha_beta(game, depth - 1, a, b));
+            score = max(score, alpha_beta(game, depth - 1, a, b, to));
             game.undo_move();
             // Specifying >= here would let me look at less positions. But I can no longer trust an equal score. If the scores are equal I need to take the first.
             // But I want the engine to take a random move among the best - so I need to be able to trust ties.
@@ -79,10 +87,11 @@ fn alpha_beta<Y>(game: &mut Y, depth: i32, mut a: Y::ScoreType, mut b: Y::ScoreT
             a = max(a, score);
         }
     } else {
-        score = Y::MAX_INFINITY;
-        for m in game.possible_moves() {
+        score = Chess::MAX_INFINITY;
+        for m in possible_moves {
+            let to = m.to;
             game.do_move(m);
-            score = min(score, alpha_beta(game, depth - 1, a, b));
+            score = min(score, alpha_beta(game, depth - 1, a, b, to));
             game.undo_move();
             if score < a {
                 break;

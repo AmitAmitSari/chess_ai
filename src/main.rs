@@ -63,7 +63,14 @@ fn play_game(game: &mut Chess, player: Player) -> GameState {
 
 fn main() {
     let mut chess = Chess::new();
-    play_game(&mut chess, PLAYER1);
+    loop {
+        println!("Looking for moves");
+        let m = get_next_move(&mut chess, 6);
+        match m {
+            None => { break; }
+            Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
+        }
+    }
 
     // for &move_str in [""; 0].iter(){
     //     chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());

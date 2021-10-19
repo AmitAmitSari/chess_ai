@@ -99,7 +99,7 @@ pub struct Move {
 
     eaten_type: PieceType,
     // Set to 0 so that nothing is eaten.
-    eaten_loc: u64,
+    pub eaten_loc: u64,
 
     // The whole new castle memory.
     castle_memory: u64,
@@ -442,23 +442,34 @@ impl Chess {
 
     fn add_moves(&self, possible_moves: &mut Vec<Move>, from: u64, to_options: u64, piece_type: PieceType) {
         for to in iter_place(to_options) {
-            let (eaten_loc, eaten_type) = self.board.type_at(to).map(|x| (to, x.1)).unwrap_or((0, PAWN));
-            let mut types = vec![piece_type];
+            let (eaten_loc, eaten_type) = self.board.type_at(to).map_or((0, PAWN), |x| (to, x.1));
             if piece_type == PAWN && (index(to) / 8) % 7 == 0 {
-                types = vec![QUEEN, ROOK, BISHOP, KNIGHT];
-            }
-            for new_type in types {
-                possible_moves.push(Move {
+                for end_type in [QUEEN, ROOK, BISHOP, KNIGHT].iter().cloned() {
+                    possible_moves.push(Move {
+                        from,
+                        to,
+                        start_type: piece_type,
+                        end_type,
+                        eaten_type,
+                        eaten_loc,
+                        castle_memory: self.board.castle_memory & !from,
+                        castle_flag: false,
+                        moving_player: self.current_player,
+                    })
+                }
+            } else {
+                let m = Move {
                     from,
                     to,
                     start_type: piece_type,
-                    end_type: new_type,
+                    end_type: piece_type,
                     eaten_type,
                     eaten_loc,
                     castle_memory: self.board.castle_memory & !from,
                     castle_flag: false,
                     moving_player: self.current_player,
-                })
+                };
+                possible_moves.push(m);
             }
         }
     }
@@ -492,7 +503,7 @@ impl Game for Chess {
 
     fn possible_moves(&self) -> Vec<Self::MoveType> {
         let mut possible_moves = vec![];
-        possible_moves.reserve(40);
+        possible_moves.reserve(80);
 
         let (king_danger, checkers, push_mask) = self.add_king_moves(&mut possible_moves);
 
