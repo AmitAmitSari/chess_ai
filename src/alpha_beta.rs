@@ -3,9 +3,10 @@ use crate::two_player_game::Scored;
 use crate::two_player_game::GameState::PLAYING;
 use crate::two_player_game::Player::PLAYER1;
 use std::cmp::{max, min};
+use std::collections::HashMap;
 use rand::rngs::ThreadRng;
 use rand::seq::{IteratorRandom, SliceRandom};
-use crate::chess_impl::Chess;
+use crate::chess_impl::{Chess, Move};
 
 pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::MoveType>
 {
@@ -15,12 +16,17 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
     let mut a = Chess::MIN_INFINITY;
     let mut b = Chess::MAX_INFINITY;
 
+    let mut killer_move_cache = HashMap::new();
+
+    let mut possible_moves = game.possible_moves();
+    possible_moves.sort_unstable_by_key(|m| m.eaten_loc == 0);
+
     if game.current_player() == PLAYER1 {
         score = Chess::MIN_INFINITY;
-        for m in game.possible_moves() {
+        for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b, to);
+            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache);
             let m_ = game.undo_move();
             if move_score >= score {
                 if move_score > score {
@@ -34,10 +40,10 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
         }
     } else {
         score = Chess::MAX_INFINITY;
-        for m in game.possible_moves() {
+        for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b, to);
+            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache);
             let m_ = game.undo_move();
             if move_score <= score {
                 if move_score < score {
@@ -58,7 +64,7 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
     return m;
 }
 
-fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64) -> <Chess as Scored>::ScoreType
+fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut HashMap<i32, Move>) -> <Chess as Scored>::ScoreType
 {
     let mut possible_moves = game.possible_moves();
 
@@ -68,6 +74,8 @@ fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType,
         if possible_moves.len() == 0 {
             return game.get_score();
         }
+    } else if depth >= 3 {
+        possible_moves.sort_unstable_by_key(|m| !(m.eaten_loc != 0 || (killer_move_cache.contains_key(&depth) && &killer_move_cache[&depth] == m)))
     }
 
     let mut score;
@@ -77,11 +85,14 @@ fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType,
         for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            score = max(score, alpha_beta(game, depth - 1, a, b, to));
-            game.undo_move();
+            score = max(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
+            let m_ = game.undo_move();
             // Specifying >= here would let me look at less positions. But I can no longer trust an equal score. If the scores are equal I need to take the first.
             // But I want the engine to take a random move among the best - so I need to be able to trust ties.
             if score > b {
+                if depth >= 3 &&  m_.eaten_loc == 0 {
+                    killer_move_cache.insert(depth, m_.clone());
+                }
                 break;
             }
             a = max(a, score);
@@ -91,9 +102,12 @@ fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType,
         for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            score = min(score, alpha_beta(game, depth - 1, a, b, to));
-            game.undo_move();
+            score = min(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
+            let m_ = game.undo_move();
             if score < a {
+                if depth >= 3 && m_.eaten_loc == 0 {
+                    killer_move_cache.insert(depth, m_.clone());
+                }
                 break;
             }
             b = min(b, score);

@@ -186,9 +186,9 @@ mod tests {
 
     #[test]
     fn test_stuff() {
-        for i in 0..-1 {
-            panic!("WHAT")
-        }
+        let mut v = vec![true, false];
+        v.sort();
+        println!("{:?}", v);
     }
 
     #[test]

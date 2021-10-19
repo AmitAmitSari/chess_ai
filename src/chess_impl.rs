@@ -90,7 +90,7 @@ impl BoardState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Move {
     pub from: u64,
     pub to: u64,
