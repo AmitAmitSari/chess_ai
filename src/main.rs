@@ -11,7 +11,6 @@ use crate::two_player_game::Player::PLAYER1;
 
 mod two_player_game;
 mod alpha_beta;
-mod xo_impl;
 mod chess_impl;
 mod bit_help;
 mod move_generation;
