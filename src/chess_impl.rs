@@ -100,13 +100,6 @@ pub struct Move {
     eaten_type: PieceType,
     // Set to 0 so that nothing is eaten.
     pub eaten_loc: u64,
-
-    // The whole new castle memory.
-    castle_memory: u64,
-    // Is this move a castle?
-    castle_flag: bool,
-
-    moving_player: Player,
 }
 
 fn place_to_letters(place: u64) -> String {
@@ -329,9 +322,6 @@ impl Chess {
                     end_type: KING,
                     eaten_type: PieceType::PAWN,
                     eaten_loc: 0,
-                    castle_memory: self.board.castle_memory & !king_place,
-                    castle_flag: true,
-                    moving_player: self.current_player,
                 })
             }
 
@@ -346,9 +336,6 @@ impl Chess {
                     end_type: KING,
                     eaten_type: PieceType::PAWN,
                     eaten_loc: 0,
-                    castle_memory: self.board.castle_memory & !king_place,
-                    castle_flag: true,
-                    moving_player: self.current_player,
                 })
             }
         }
@@ -415,9 +402,6 @@ impl Chess {
                         end_type: PieceType::PAWN,
                         eaten_type: PieceType::PAWN,
                         eaten_loc: eaten,
-                        castle_memory: self.board.castle_memory,
-                        castle_flag: false,
-                        moving_player: self.current_player,
                     })
                 }
             }
@@ -456,9 +440,6 @@ impl Chess {
                         end_type,
                         eaten_type,
                         eaten_loc,
-                        castle_memory: self.board.castle_memory & !from,
-                        castle_flag: false,
-                        moving_player: self.current_player,
                     })
                 }
             } else {
@@ -469,9 +450,6 @@ impl Chess {
                     end_type: piece_type,
                     eaten_type,
                     eaten_loc,
-                    castle_memory: self.board.castle_memory & !from,
-                    castle_flag: false,
-                    moving_player: self.current_player,
                 };
                 possible_moves.push(m);
             }
@@ -567,15 +545,19 @@ impl Game for Chess {
         let prev_castle = self.board.castle_memory;
         let prev_en_passant = self.board.en_passant_square;
 
-        *self.board.get_mut(play.moving_player, play.start_type) &= !play.from;
-        *self.board.get_mut(play.moving_player, play.end_type) |= play.to;
+        *self.board.get_mut(self.current_player, play.start_type) &= !play.from;
+        *self.board.get_mut(self.current_player, play.end_type) |= play.to;
 
-        *self.board.get_mut(play.moving_player.other(), play.eaten_type) &= !play.eaten_loc;
+        *self.board.get_mut(self.current_player.other(), play.eaten_type) &= !play.eaten_loc;
 
         // Castle
-        if play.castle_flag {
-            let (from_index, to_index) = Chess::castle_rook_move(play.to);
-            self.board.move_piece(play.moving_player, PieceType::ROOK, from_index, to_index);
+        if play.start_type == KING && play.from & (KING_PLACES[0] | KING_PLACES[1]) != 0 {
+            let (from_x, _) = place_to_coord(play.from);
+            let (to_x, _) = place_to_coord(play.to);
+            if (from_x as i32 - to_x as i32).abs() == 2 {
+                let (from_index, to_index) = Chess::castle_rook_move(play.to);
+                self.board.move_piece(self.current_player, PieceType::ROOK, from_index, to_index);
+            }
         }
 
         // En passant
@@ -588,7 +570,7 @@ impl Game for Chess {
             }
         }
 
-        self.board.castle_memory = play.castle_memory;
+        self.board.castle_memory = self.board.castle_memory & !play.from;
         self.current_player = self.current_player.other();
 
         self.history.push((play, prev_castle, prev_en_passant));
@@ -597,20 +579,26 @@ impl Game for Chess {
     fn undo_move(&mut self) -> Self::MoveType {
         let (play, castle_memory, en_passant_square) = self.history.pop().unwrap();
 
-        *self.board.get_mut(play.moving_player, play.end_type) &= !play.to;
-        *self.board.get_mut(play.moving_player, play.start_type) |= play.from;
+        self.current_player = self.current_player.other();
 
-        *self.board.get_mut(play.moving_player.other(), play.eaten_type) |= play.eaten_loc;
+        *self.board.get_mut(self.current_player, play.end_type) &= !play.to;
+        *self.board.get_mut(self.current_player, play.start_type) |= play.from;
+
+        *self.board.get_mut(self.current_player.other(), play.eaten_type) |= play.eaten_loc;
 
         // Castle
-        if play.castle_flag {
-            let (from_index, to_index) = Chess::castle_rook_move(play.to);
-            self.board.move_piece(play.moving_player, PieceType::ROOK, to_index, from_index);
+        if play.start_type == KING && play.from & (KING_PLACES[0] | KING_PLACES[1]) != 0 {
+            let (from_x, _) = place_to_coord(play.from);
+            let (to_x, _) = place_to_coord(play.to);
+            if (from_x as i32 - to_x as i32).abs() == 2 {
+                let (from_index, to_index) = Chess::castle_rook_move(play.to);
+                self.board.move_piece(self.current_player, PieceType::ROOK, to_index, from_index);
+            }
         }
 
         self.board.castle_memory = castle_memory;
         self.board.en_passant_square = en_passant_square;
-        self.current_player = self.current_player.other();
+
 
         play
     }

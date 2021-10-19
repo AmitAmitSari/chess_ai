@@ -152,7 +152,7 @@ impl MoveTables {
         if let Some(move_one) = dir.mv(index_to_place(index)) {
             res |= move_one & !blockers;
             if res != 0 && index / 8 == start_row {
-                res |= index_to_place(index + (row_diff * 8) as usize) & !blockers;
+                res |= index_to_place((index as i32 + row_diff * 8) as usize) & !blockers;
             }
         }
         res
