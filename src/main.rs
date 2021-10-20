@@ -1,9 +1,10 @@
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::time::Instant;
 use text_io::read;
 
-use crate::two_player_game::{Game, GameState, Player};
-use crate::alpha_beta::get_next_move;
+use crate::two_player_game::{Game, GameState, Player, Scored};
+use crate::alpha_beta::{get_next_move, alpha_beta};
 use crate::bit_help::{coord_to_index, Dir, index, index_to_place, place_to_coord, ray, ray_until_blocker};
 use crate::chess_impl::{Chess, Move};
 use crate::two_player_game::GameState::PLAYING;
@@ -38,7 +39,7 @@ fn print_u64(map: u64) {
 fn play_game(game: &mut Chess, player: Player) -> GameState {
     loop {
         if game.current_player() == player {
-            let om = get_next_move(game, 6);
+            let om = get_next_move(game, 7);
             if om.is_none() {
                 // todo: fix
                 return GameState::PLAYER1WIN;
@@ -61,37 +62,57 @@ fn play_game(game: &mut Chess, player: Player) -> GameState {
 }
 
 
-fn main() {
+fn play_self() {
     let mut chess = Chess::new();
     let mut turns = 0;
     let start = Instant::now();
     loop {
         println!("At move: {}, took {:?}", turns, start.elapsed());
-        let m = get_next_move(&mut chess, 6);
+        let m = get_next_move(&mut chess, 7);
         match m {
             None => { break; }
             Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
         }
         turns += 1;
     }
+}
 
-    // for &move_str in [""; 0].iter(){
-    //     chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
-    // }
-    //
-    // chess.console_draw();
-    // let depth = 6;
-    //
-    // for i in 1..depth+1 {
-    //     println!("{}", count_positions(&mut chess, i));
-    // }
-    //
-    // for m in chess.possible_moves() {
-    //     chess.do_move(m);
-    //     let cnt = if depth > 1 {
-    //         count_positions(&mut chess, depth - 1)
-    //     } else { 0 };
-    //     let x = chess.undo_move();
-    //     println!("{}, {}", cnt, x);
-    // }
+fn print_state_at(fen: &str, move_str: &str, depth: i32) {
+    let mut chess = Chess::new();
+    chess.setup_fen_string("8/1p6/1k6/4r1NP/1P6/2P2R2/1b3PP1/5K2 w - - 0 1");
+    let a = Chess::MIN_INFINITY;
+    let b = Chess::MAX_INFINITY;
+
+    println!("Alpha beta score: {}", alpha_beta(&mut chess, depth, a, b, 0, &mut HashMap::new()) );
+    chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
+
+    for d in (0..depth).rev() {
+        // println!("Alpha beta score: {}", alpha_beta(&mut chess, d, a, b, 0, &mut HashMap::new()) );
+        let m = get_next_move(&mut chess, d).unwrap();
+        println!("Do Move: {}", m);
+        chess.do_move(m);
+    }
+
+    chess.console_draw();
+}
+
+
+fn main() {
+    print_state_at("8/1p6/1k6/4r1NP/1P6/2P2R2/1b3PP1/5K2 w - - 0 1", "f3f6", 7);
+    let mut chess = Chess::new();
+    // play_game(&mut chess, PLAYER1);
+
+    chess.setup_fen_string("8/1p6/1k6/4r1NP/1P6/2P2R2/1b3PP1/5K2 w - - 0 1");
+
+    let a = Chess::MIN_INFINITY;
+    let b = Chess::MAX_INFINITY;
+
+
+    println!("Alpha beta score: {}", alpha_beta(&mut chess, 7, a, b, 0, &mut HashMap::new()) );
+    for m in chess.possible_moves() {
+        chess.do_move(m.clone());
+        println!("Move: {}, Alpha beta score: {}", m, alpha_beta(&mut chess, 6, a, b, 0, &mut HashMap::new()) );
+        chess.undo_move();
+    }
+
 }

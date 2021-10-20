@@ -9,6 +9,9 @@ edition = "2018"
 [profile.release]
 debug = 1
 
+[profile.dev]
+opt-level = 3
+
 [dependencies]
 text_io = "0.1.9"
 rand = "0.8.4"

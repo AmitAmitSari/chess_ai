@@ -60,17 +60,50 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
     let i = (0..best_moves.len()).choose(&mut rng);
 
     let m = i.map(|x| best_moves.swap_remove(x));
-    eprintln!("Expected score: {}", score);
+    eprintln!("Expected score: {}, choose from {} other moves", score, best_moves.len());
     return m;
 }
 
-fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut HashMap<i32, Move>) -> <Chess as Scored>::ScoreType
+pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>::ScoreType {
+    let mut possible_moves = game.possible_moves();
+
+    if depth <= 0 {
+        // Quiescence.
+        possible_moves.retain(|m| m.eaten_loc != 0 && m.eaten_loc == last_to);
+        if possible_moves.len() == 0 {
+            return game.get_score();
+        }
+    }
+
+    let mut score;
+
+    if game.current_player() == PLAYER1 {
+        score = Chess::MIN_INFINITY;
+        for m in possible_moves {
+            let to = m.eaten_loc;
+            game.do_move(m);
+            score = max(score, min_max(game, depth - 1, to));
+            game.undo_move();
+        }
+    } else {
+        score = Chess::MAX_INFINITY;
+        for m in possible_moves {
+            let to = m.eaten_loc;
+            game.do_move(m);
+            score = min(score, min_max(game, depth - 1, to));
+            game.undo_move();
+        }
+    }
+    return score;
+}
+
+pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut HashMap<i32, Move>) -> <Chess as Scored>::ScoreType
 {
     let mut possible_moves = game.possible_moves();
 
     if depth <= 0 {
         // Quiescence.
-        possible_moves.retain(|m| m.eaten_loc == last_to);
+        possible_moves.retain(|m| m.eaten_loc != 0 && m.eaten_loc == last_to);
         if possible_moves.len() == 0 {
             return game.get_score();
         }
@@ -83,7 +116,7 @@ fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType,
     if game.current_player() == PLAYER1 {
         score = Chess::MIN_INFINITY;
         for m in possible_moves {
-            let to = m.to;
+            let to = m.eaten_loc;
             game.do_move(m);
             score = max(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
             let m_ = game.undo_move();
@@ -100,7 +133,7 @@ fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType,
     } else {
         score = Chess::MAX_INFINITY;
         for m in possible_moves {
-            let to = m.to;
+            let to = m.eaten_loc;
             game.do_move(m);
             score = min(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
             let m_ = game.undo_move();
