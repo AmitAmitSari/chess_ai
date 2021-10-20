@@ -118,7 +118,8 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
         for m in possible_moves {
             let to = m.eaten_loc;
             game.do_move(m);
-            score = max(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
+            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache)} else { game.get_score() };
+            score = max(score, move_score);
             let m_ = game.undo_move();
             // Specifying >= here would let me look at less positions. But I can no longer trust an equal score. If the scores are equal I need to take the first.
             // But I want the engine to take a random move among the best - so I need to be able to trust ties.
@@ -135,7 +136,8 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
         for m in possible_moves {
             let to = m.eaten_loc;
             game.do_move(m);
-            score = min(score, alpha_beta(game, depth - 1, a, b, to, killer_move_cache));
+            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache)} else { game.get_score() };
+            score = min(score, move_score);
             let m_ = game.undo_move();
             if score < a {
                 if depth >= 0 && m_.eaten_loc == 0 {

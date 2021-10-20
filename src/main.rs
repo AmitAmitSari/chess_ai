@@ -68,7 +68,7 @@ fn play_self() {
     let start = Instant::now();
     loop {
         println!("At move: {}, took {:?}", turns, start.elapsed());
-        let m = get_next_move(&mut chess, 7);
+        let m = get_next_move(&mut chess, 6);
         match m {
             None => { break; }
             Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
@@ -98,21 +98,5 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
 
 
 fn main() {
-    print_state_at("8/1p6/1k6/4r1NP/1P6/2P2R2/1b3PP1/5K2 w - - 0 1", "f3f6", 7);
-    let mut chess = Chess::new();
-    // play_game(&mut chess, PLAYER1);
-
-    chess.setup_fen_string("8/1p6/1k6/4r1NP/1P6/2P2R2/1b3PP1/5K2 w - - 0 1");
-
-    let a = Chess::MIN_INFINITY;
-    let b = Chess::MAX_INFINITY;
-
-
-    println!("Alpha beta score: {}", alpha_beta(&mut chess, 7, a, b, 0, &mut HashMap::new()) );
-    for m in chess.possible_moves() {
-        chess.do_move(m.clone());
-        println!("Move: {}, Alpha beta score: {}", m, alpha_beta(&mut chess, 6, a, b, 0, &mut HashMap::new()) );
-        chess.undo_move();
-    }
-
+    play_self();
 }
