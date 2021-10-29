@@ -68,7 +68,7 @@ fn play_self() {
     let start = Instant::now();
     loop {
         println!("At move: {}, took {:?}", turns, start.elapsed());
-        let m = get_next_move(&mut chess, 6);
+        let m = get_next_move(&mut chess, 7);
         match m {
             None => { break; }
             Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
@@ -83,7 +83,7 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
     let a = Chess::MIN_INFINITY;
     let b = Chess::MAX_INFINITY;
 
-    println!("Alpha beta score: {}", alpha_beta(&mut chess, depth, a, b, 0, &mut HashMap::new()) );
+    println!("Alpha beta score: {}", alpha_beta(&mut chess, depth, a, b, 0, &mut HashMap::new(), &mut 0) );
     chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
 
     for d in (0..depth).rev() {

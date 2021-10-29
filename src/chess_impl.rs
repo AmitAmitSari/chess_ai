@@ -11,7 +11,7 @@ use crate::move_generation::MoveTables;
 use crate::print_u64;
 use crate::two_player_game::GameState::PLAYING;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum PieceType { PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5 }
 
 impl PieceType {
@@ -90,7 +90,7 @@ impl BoardState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Move {
     pub from: u64,
     pub to: u64,
