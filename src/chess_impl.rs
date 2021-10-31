@@ -270,7 +270,11 @@ impl Chess {
         res.to_string()
     }
 
-    pub fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
+    pub fn get_game_len(&self) -> usize {
+        self.history.len()
+    }
+
+    fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
         let (from_index, to_index): (usize, usize) = match index(king_end_location) {
             x if x == 1 => (0, 2),
             x if x == 5 => (7, 4),

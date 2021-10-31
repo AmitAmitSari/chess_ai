@@ -39,7 +39,7 @@ fn print_u64(map: u64) {
 fn play_game(game: &mut Chess, player: Player) -> GameState {
     loop {
         if game.current_player() == player {
-            let om = get_next_move(game, 7);
+            let om = get_next_move(game, 8);
             if om.is_none() {
                 // todo: fix
                 return GameState::PLAYER1WIN;
@@ -52,9 +52,10 @@ fn play_game(game: &mut Chess, player: Player) -> GameState {
             let mut move_string: String = read!();
 
             while game.possible_moves().into_iter().filter(|m| m.to_string() == move_string).nth(0).is_none() {
-                println!("Move was unreadable, input another one.");
+                println!("ERROR");
                 move_string = read!();
             }
+            println!("GOOD");
 
             game.do_move(game.possible_moves().into_iter().filter(|m| m.to_string() == move_string).nth(0).unwrap());
         }
@@ -68,7 +69,7 @@ fn play_self() {
     let start = Instant::now();
     loop {
         println!("At move: {}, took {:?}", turns, start.elapsed());
-        let m = get_next_move(&mut chess, 7);
+        let m = get_next_move(&mut chess, 8);
         match m {
             None => { break; }
             Some(m_) => { println!("Found move: {}", m_); chess.do_move(m_); }
@@ -98,5 +99,6 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
 
 
 fn main() {
-    play_self();
+    let mut chess = Chess::new();
+    play_game(&mut chess, PLAYER1);
 }
