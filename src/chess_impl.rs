@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 use crate::two_player_game::{Game, Player, GameState, Scored};
 use crate::bit_help::{index_to_place, place_to_coord, coord_to_index, Dir, index, iter_index, iter_place, ray_until_blocker};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
@@ -100,6 +101,17 @@ pub struct Move {
     eaten_type: PieceType,
     // Set to 0 so that nothing is eaten.
     pub eaten_loc: u64,
+}
+
+impl Move {
+    pub fn hash(&self) -> u64 {
+        self.from.trailing_zeros() as u64 |
+            (self.to.trailing_zeros() as u64) << 8 |
+            (self.start_type as u64) << 16 |
+            (self.end_type as u64) << 24 |
+            (self.eaten_type as u64) << 32 |
+            (self.eaten_loc.trailing_zeros() as u64) << 40
+    }
 }
 
 fn place_to_letters(place: u64) -> String {
@@ -651,6 +663,7 @@ impl Scored for Chess {
         for &player in [PLAYER1, PLAYER2].iter() {
             let mult = player as i32 * -2 + 1;
             for piece_type in PieceType::all() {
+                // todo: Try piece_type as usize here.
                 for i in iter_index(self.board.get(player, piece_type)) {
                     let fi = i ^ ( 56 * (1 - player as usize));
                     mg_score += mult * (MG_TABLE[piece_type as usize][fi] + MG_VALUE[piece_type as usize]);

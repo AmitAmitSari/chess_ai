@@ -3,24 +3,67 @@ use crate::two_player_game::Scored;
 use crate::two_player_game::GameState::PLAYING;
 use crate::two_player_game::Player::PLAYER1;
 use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::hash_map::RandomState;
+use std::hash::{BuildHasher, Hasher};
+use std::time::{Duration, Instant};
+use ahash::AHashMap;
 use rand::rngs::ThreadRng;
 use rand::seq::{IteratorRandom, SliceRandom};
 use crate::chess_impl::{Chess, Move};
 
-type Cache = HashMap<i32, HashMap<Move, i32>>;
+type Cache = HashMap<u64, i32, A>;
+type Caches = HashMap<usize, Cache, A>;
+
+
+pub struct A {
+
+}
+
+pub struct H {
+    state: u64
+}
+
+impl BuildHasher for A {
+    type Hasher = H;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        H { state: 0 }
+    }
+}
+
+impl Hasher for H {
+    fn finish(&self) -> u64 {
+        return self.state;
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        todo!()
+    }
+
+    fn write_u64(&mut self, i: u64) {
+        self.state = i;
+    }
+
+    fn write_usize(&mut self, i: usize) {
+        self.state = i as u64;
+    }
+}
+
 
 pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::MoveType> {
 
-    let mut killer_move_cache: Cache = HashMap::new();
+    let mut killer_move_cache: Caches = HashMap::with_capacity_and_hasher(depth as usize, A {});
     let mut m = None;
     let mut total_count = 0;
+    let start = Instant::now();
     for i in min(4,depth)..depth+1 {
         let call_count: &mut i32 = &mut 0;
         let res = _get_next_move(game, i, &mut killer_move_cache, call_count);
         m = res.0;
         total_count += *call_count;
-        eprintln!("Depth: {}, Move: {}, Score: {}, CallCount: {}, Total: {}", i, m.clone().unwrap(), res.1, call_count, total_count);
+        let nps = total_count as f64 / start.elapsed().as_secs_f64();
+        eprintln!("Depth: {}, Move: {}, Score: {}, CallCount: {}, Total: {}, NPS: {}", i, m.clone().unwrap(), res.1, call_count, total_count, nps as u64);
     }
     // let mut cache = killer_move_cache.iter().collect::<Vec<_>>();
     // cache.sort_unstable_by_key(|(k, v)| *k );
@@ -35,11 +78,11 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
 }
 
 #[inline]
-fn move_ordering(m: &Move, depth: i32, killer_move_cache: &Cache) -> i32 {
-    -*killer_move_cache.get(&depth).and_then(|d| d.get(m)).unwrap_or(&((m.eaten_loc != 0) as i32 * 10))
+fn move_ordering(m: &Move, killer_move_cache_at_depth: &Cache) -> i32 {
+    -max(*killer_move_cache_at_depth.get(&m.hash()).unwrap_or(&0), ((m.eaten_loc != 0) as i32 * 10))
 }
 
-fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cache, call_count: &mut i32) -> (Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)
+fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32) -> (Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)
 {
     let mut rng = rand::thread_rng();
     let mut best_moves = vec![];
@@ -49,7 +92,8 @@ fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cach
 
     let mut possible_moves = game.possible_moves();
     *call_count += 1;
-    possible_moves.sort_by_cached_key(|m| move_ordering(m, depth, killer_move_cache));
+    let at_depth = killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {}));
+    possible_moves.sort_by_cached_key(|m| move_ordering(m, at_depth));
 
     if game.current_player() == PLAYER1 {
         score = Chess::MIN_INFINITY + (game.get_game_len() * 100) as <Chess as Scored>::ScoreType;
@@ -91,7 +135,7 @@ fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cach
 
     let m = i.map(|x| best_moves.swap_remove(x));
     if let Some(m_) = m.clone() {
-        *killer_move_cache.entry(depth).or_insert(HashMap::new()).entry(m_).or_insert(0) += 1;
+        *killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {})).entry(m_.hash()).or_insert(0) += 1;
     }
     return (m, score);
 }
@@ -129,7 +173,7 @@ pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>:
     return score;
 }
 
-pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Cache, call_count: &mut i32) -> <Chess as Scored>::ScoreType
+pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32) -> <Chess as Scored>::ScoreType
 {
     let mut possible_moves = game.possible_moves();
     *call_count += 1;
@@ -141,7 +185,9 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
             return game.get_score();
         }
     } else {
-        possible_moves.sort_by_cached_key(|m| move_ordering(m, depth, killer_move_cache));
+        // Only sort if depth is high enough to be worth it - doesn't help
+        let at_depth = killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {}));
+        possible_moves.sort_by_cached_key(|m| move_ordering(m, at_depth));
     }
 
     let mut score;
@@ -158,7 +204,7 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
             // But I want the engine to take a random move among the best - so I need to be able to trust ties.
             if score > b {
                 if depth >= 0 && m_.eaten_loc == 0 {
-                    *killer_move_cache.entry(depth).or_insert(HashMap::new()).entry(m_).or_insert(0) += 1;
+                    *killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {})).entry(m_.hash()).or_insert(0) += 1;
                 }
                 break;
             }
@@ -174,7 +220,7 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
             let m_ = game.undo_move();
             if score < a {
                 if depth >= 0 && m_.eaten_loc == 0 {
-                    *killer_move_cache.entry(depth).or_insert(HashMap::new()).entry(m_).or_insert(0) += 1;
+                    *killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {})).entry(m_.hash()).or_insert(0) += 1;
                 }
                 break;
             }
