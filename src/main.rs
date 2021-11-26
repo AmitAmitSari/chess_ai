@@ -19,10 +19,6 @@ mod move_generation;
 mod tests;
 
 
-
-
-
-
 fn print_u64(map: u64) {
     for y in 0..8 {
         for x in 0..8 {
@@ -37,7 +33,7 @@ fn print_u64(map: u64) {
 }
 
 
-fn play_game(game: &mut Chess, player: Player) -> GameState {
+fn play_game_chess_com(game: &mut Chess, player: Player) -> GameState {
     loop {
         if game.current_player() == player {
             let om = get_next_move(game, 8);
@@ -63,6 +59,75 @@ fn play_game(game: &mut Chess, player: Player) -> GameState {
     }
 }
 
+fn output_game_state(game: &Chess) {
+    let pieces = game.all_pieces();
+    println!("{}", pieces.len());
+    for (x, y, player, piece) in pieces {
+        let info_to_char = [["P", "N", "B", "R", "Q", "K"], ["p", "n", "b", "r", "q", "k"]];
+        println!("{} {} {}", x, y, info_to_char[player as usize][piece as usize]);
+    }
+}
+
+fn output_move(m: Move) {
+    println!("{}", m.serialize())
+}
+
+fn output_possible_moves(game: &Chess) {
+    let moves = game.possible_moves();
+    println!("{}", moves.len());
+    for m in moves {
+        output_move(m);
+    }
+}
+
+fn input_move(game: &Chess) -> Option<Move> {
+    let move_string: String = read!("{}\n");
+    let _m: Option<Move> = game.possible_moves().into_iter().filter(|m| m.serialize() == move_string).nth(0);
+    if _m.is_some() {
+        println!("GOOD");
+    } else {
+        eprintln!("ERROR");
+        println!("ERROR");
+    }
+    return _m;
+}
+
+fn play_game_my_front(human_as: Player, depth: i32) {
+    /*
+        game state
+        if human_turn: possible_moves
+            if no moves: "AI WIN"
+        else:
+
+     */
+    let mut game = Chess::new();
+
+    loop {
+        output_game_state(&game);
+
+        if game.current_player() == human_as {
+            output_possible_moves(&game);
+            if game.possible_moves().len() == 0 {
+                println!("AI WIN");
+                break;
+            }
+
+            let mut om = input_move(&game);
+            while om.is_none() {
+                om = input_move(&game);
+            }
+            game.do_move(om.unwrap());
+        } else {
+            let om = get_next_move(&mut game, depth);
+            if let Some(m) = om {
+                game.do_move(m);
+            } else {
+                println!("HUMAN WIN");
+                break;
+            }
+        }
+    }
+}
 
 fn play_self() {
     let mut chess = Chess::new();
@@ -100,7 +165,5 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
 
 
 fn main() {
-    play_self();
-    // let mut chess = Chess::new();
-    // play_game(&mut chess, PLAYER1);
+    play_game_my_front(PLAYER1, 5);
 }

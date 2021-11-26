@@ -96,7 +96,7 @@ pub struct Move {
     pub from: u64,
     pub to: u64,
     start_type: PieceType,
-    end_type: PieceType,
+    pub end_type: PieceType,
 
     eaten_type: PieceType,
     // Set to 0 so that nothing is eaten.
@@ -111,6 +111,14 @@ impl Move {
             (self.end_type as u64) << 24 |
             (self.eaten_type as u64) << 32 |
             (self.eaten_loc.trailing_zeros() as u64) << 40
+    }
+
+    pub fn serialize(&self) -> String {
+        let f = place_to_coord(self.from);
+        let t = place_to_coord(self.to);
+        let eaten = if self.eaten_loc != 0 {place_to_coord(self.eaten_loc)} else {(-1, -1)};
+        let end_type = self.end_type as usize;
+        format!("{} {} {} {} {} {} {}", f.0, f.1, t.0, t.1, eaten.0, eaten.1, end_type)
     }
 }
 
@@ -284,6 +292,19 @@ impl Chess {
 
     pub fn get_game_len(&self) -> usize {
         self.history.len()
+    }
+
+    pub fn all_pieces(&self) -> Vec<(i32, i32, Player, PieceType)> {
+        let mut res = Vec::new();
+        for x in 0..8 {
+            for y in 0..8 {
+                let here = self.board.type_at(index_to_place(coord_to_index((x, y))));
+                if let Some((player, piece)) = here {
+                    res.push((x, y, player, piece))
+                }
+            }
+        }
+        res
     }
 
     fn castle_rook_move(king_end_location: u64) -> (u64, u64) {
