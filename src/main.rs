@@ -165,5 +165,5 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
 
 
 fn main() {
-    play_game_my_front(PLAYER1, 5);
+    play_game_my_front(PLAYER1, 8);
 }
