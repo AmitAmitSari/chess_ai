@@ -50,20 +50,31 @@ impl Hasher for H {
     }
 }
 
+pub struct MoveResult {
+    pub chess_move: Option<<Chess as Game>::MoveType>,
+    pub move_from_depth: i32,
+}
 
-pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::MoveType> {
+pub fn get_next_move(game: &mut Chess, depth: i32, max_timestamp_ms: i32) -> MoveResult {
 
     let mut killer_move_cache: Caches = HashMap::with_capacity_and_hasher(depth as usize, A {});
     let mut m = None;
     let mut total_count = 0;
+    let mut move_from_depth = 0;
+
     let start = Instant::now();
     for i in min(4,depth)..depth+1 {
         let call_count: &mut i32 = &mut 0;
-        let res = _get_next_move(game, i, &mut killer_move_cache, call_count);
-        m = res.0;
-        total_count += *call_count;
-        let nps = total_count as f64 / start.elapsed().as_secs_f64();
-        eprintln!("Depth: {}, Move: {}, Score: {}, CallCount: {}, Total: {}, NPS: {}", i, m.clone().unwrap(), res.1, call_count, total_count, nps as u64);
+        let ores = _get_next_move(game, i, &mut killer_move_cache, call_count, max_timestamp_ms);
+        if let Some(res) = ores {
+            if res.0.is_some() {
+                m = res.0;
+                move_from_depth = i;
+            }
+            total_count += *call_count;
+            let nps = total_count as f64 / start.elapsed().as_secs_f64();
+            eprintln!("Depth: {}, Move: {}, Score: {}, CallCount: {}, Total: {}, NPS: {}", i, m.clone().unwrap(), res.1, call_count, total_count, nps as u64);
+        }
     }
     // let mut cache = killer_move_cache.iter().collect::<Vec<_>>();
     // cache.sort_unstable_by_key(|(k, v)| *k );
@@ -74,7 +85,10 @@ pub fn get_next_move(game: &mut Chess, depth: i32) -> Option<<Chess as Game>::Mo
     //     let moves = moves.iter().map(|(m, c)| m.to_string() + ": " + &c.to_string()).collect::<Vec<_>>();
     //     eprintln!("{}: {:?}", key, moves);
     // }
-    m
+    MoveResult {
+        chess_move: m,
+        move_from_depth
+    }
 }
 
 #[inline]
@@ -82,7 +96,7 @@ fn move_ordering(m: &Move, killer_move_cache_at_depth: &Cache) -> i32 {
     -max(*killer_move_cache_at_depth.get(&m.hash()).unwrap_or(&0), ((m.eaten_loc != 0) as i32 * 10))
 }
 
-fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32) -> (Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)
+fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: i32) -> Option<(Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)>
 {
     let mut rng = rand::thread_rng();
     let mut best_moves = vec![];
@@ -100,7 +114,7 @@ fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cach
         for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache, call_count);
+            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache, call_count, max_timestamp_ms)?;
             let m_ = game.undo_move();
             if move_score >= score {
                 if move_score > score {
@@ -117,7 +131,7 @@ fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cach
         for m in possible_moves {
             let to = m.to;
             game.do_move(m);
-            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache, call_count);
+            let move_score = alpha_beta(game, depth - 1, a, b, to, &mut killer_move_cache, call_count, max_timestamp_ms)?;
             let m_ = game.undo_move();
             if move_score <= score {
                 if move_score < score {
@@ -137,7 +151,7 @@ fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Cach
     if let Some(m_) = m.clone() {
         *killer_move_cache.entry(game.get_game_len()).or_insert(HashMap::with_hasher(A {})).entry(m_.hash()).or_insert(0) += 1;
     }
-    return (m, score);
+    return Some((m, score));
 }
 
 pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>::ScoreType {
@@ -173,7 +187,7 @@ pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>:
     return score;
 }
 
-pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32) -> <Chess as Scored>::ScoreType
+pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: i32) -> Option<<Chess as Scored>::ScoreType>
 {
     let mut possible_moves = game.possible_moves();
     *call_count += 1;
@@ -182,7 +196,7 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
         // Quiescence.
         possible_moves.retain(|m| m.eaten_loc != 0 && m.eaten_loc == last_to);
         if possible_moves.len() == 0 {
-            return game.get_score();
+            return Some(game.get_score());
         }
     } else {
         // Only sort if depth is high enough to be worth it - doesn't help
@@ -197,7 +211,7 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
         for m in possible_moves {
             let to = m.eaten_loc;
             game.do_move(m);
-            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache, call_count)} else { game.get_score() };
+            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache, call_count, max_timestamp_ms)?} else { game.get_score() };
             score = max(score, move_score);
             let m_ = game.undo_move();
             // Specifying >= here would let me look at less positions. But I can no longer trust an equal score. If the scores are equal I need to take the first.
@@ -215,7 +229,7 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
         for m in possible_moves {
             let to = m.eaten_loc;
             game.do_move(m);
-            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache, call_count)} else { game.get_score() };
+            let move_score = if depth > 1 || to != 0 {alpha_beta(game, depth - 1, a, b, to, killer_move_cache, call_count, max_timestamp_ms)?} else { game.get_score() };
             score = min(score, move_score);
             let m_ = game.undo_move();
             if score < a {
@@ -227,6 +241,6 @@ pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreT
             b = min(b, score);
         }
     }
-    return score;
+    return Some(score);
 }
 
