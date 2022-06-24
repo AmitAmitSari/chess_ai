@@ -62,11 +62,12 @@ pub fn get_next_move(game: &mut Chess, depth: i32, max_timestamp_ms: u128) -> Mo
     let mut m = None;
     let mut total_count = 0;
     let mut move_from_depth = 0;
+    let mut game_copy = game.clone();
 
     let start = Instant::now();
     for i in min(4,depth)..depth+1 {
         let call_count: &mut i32 = &mut 0;
-        let ores = _get_next_move(game, i, &mut killer_move_cache, call_count, max_timestamp_ms);
+        let ores = _get_next_move(&mut game_copy, i, &mut killer_move_cache, call_count, max_timestamp_ms);
         if let Some(res) = ores {
             if res.0.is_some() {
                 m = res.0;
@@ -190,9 +191,9 @@ pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>:
 
 pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: u128) -> Option<<Chess as Scored>::ScoreType>
 {
-    // if get_time() >= max_timestamp_ms {
-    //     return None;
-    // }
+    if get_time() >= max_timestamp_ms {
+        return None;
+    }
 
     let mut possible_moves = game.possible_moves();
     *call_count += 1;

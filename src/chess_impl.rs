@@ -144,6 +144,7 @@ impl Display for Move {
     }
 }
 
+#[derive(Clone)]
 pub struct Chess {
     current_player: Player,
     board: BoardState,
