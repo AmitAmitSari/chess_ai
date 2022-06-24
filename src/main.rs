@@ -123,7 +123,7 @@ fn play_game_my_front(human_as: Player, depth: i32) {
             let tup = input_move(&game);
             om = tup.0; max_timestamp_ms = tup.1;
             while om.is_none() {
-                let tup= input_move(&game);
+                let tup = input_move(&game);
                 om = tup.0; max_timestamp_ms = tup.1;
             }
             game.do_move(om.unwrap());
@@ -132,6 +132,7 @@ fn play_game_my_front(human_as: Player, depth: i32) {
             match om {
                 MoveResult { chess_move: Some(m), ..} => {
                     game.do_move(m);
+                    eprintln!("Move from depth: {}", om.move_from_depth);
                 }
 
                 MoveResult { chess_move: None, .. } => {

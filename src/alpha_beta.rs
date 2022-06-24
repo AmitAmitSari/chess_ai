@@ -11,6 +11,7 @@ use ahash::AHashMap;
 use rand::rngs::ThreadRng;
 use rand::seq::{IteratorRandom, SliceRandom};
 use crate::chess_impl::{Chess, Move};
+use crate::get_time;
 
 type Cache = HashMap<u64, i32, A>;
 type Caches = HashMap<usize, Cache, A>;
@@ -98,6 +99,10 @@ fn move_ordering(m: &Move, killer_move_cache_at_depth: &Cache) -> i32 {
 
 fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: i32) -> Option<(Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)>
 {
+    if get_time() >= max_timestamp_ms {
+        return None;
+    }
+
     let mut rng = rand::thread_rng();
     let mut best_moves = vec![];
     let mut score;
