@@ -37,7 +37,7 @@ fn print_u64(map: u64) {
 fn play_game_chess_com(game: &mut Chess, player: Player) -> GameState {
     loop {
         if game.current_player() == player {
-            let om = get_next_move(game, 8, i32::MAX);
+            let om = get_next_move(game, 8, u128::MAX);
             match om {
                 MoveResult { chess_move: Some(m), .. } => {
                     println!("{}", m);
@@ -83,9 +83,9 @@ fn output_possible_moves(game: &Chess) {
     }
 }
 
-fn input_move(game: &Chess) -> (Option<Move>, i32) {
+fn input_move(game: &Chess) -> (Option<Move>, u128) {
     let move_string: String = read!("{}__");
-    let timeout_seconds: i32 = read!("{}\n");
+    let timeout_seconds: u128 = read!("{}\n");
     let _m: Option<Move> = game.possible_moves().into_iter().filter(|m| m.serialize() == move_string).nth(0);
     if _m.is_some() && timeout_seconds > 0 {
         println!("GOOD");
@@ -95,6 +95,7 @@ fn input_move(game: &Chess) -> (Option<Move>, i32) {
     }
 
     let max_timestamp_ms = get_time() + timeout_seconds * 1000;
+    eprintln!("Timeout seconds: {}, max_timestamp_ms: {}", timeout_seconds, max_timestamp_ms);
     return (_m, max_timestamp_ms);
 }
 
@@ -150,7 +151,7 @@ fn play_self() {
     let start = Instant::now();
     loop {
         println!("At move: {}, took {:?}", turns, start.elapsed());
-        let m = get_next_move(&mut chess, 8, i32::MAX);
+        let m = get_next_move(&mut chess, 8, u128::MAX);
         match m {
             MoveResult { chess_move: None, .. } => { break; }
             MoveResult { chess_move: Some(m_), .. } => { println!("Found move: {}", m_); chess.do_move(m_); }
@@ -165,12 +166,12 @@ fn print_state_at(fen: &str, move_str: &str, depth: i32) {
     let a = Chess::MIN_INFINITY;
     let b = Chess::MAX_INFINITY;
 
-    println!("Alpha beta score: {}", alpha_beta(&mut chess, depth, a, b, 0, &mut HashMap::with_hasher(A {}), &mut 0, i32::MAX).unwrap() );
+    println!("Alpha beta score: {}", alpha_beta(&mut chess, depth, a, b, 0, &mut HashMap::with_hasher(A {}), &mut 0, u128::MAX).unwrap() );
     chess.do_move(chess.possible_moves().into_iter().filter(|m| m.to_string() == move_str).nth(0).unwrap());
 
     for d in (0..depth).rev() {
         // println!("Alpha beta score: {}", alpha_beta(&mut chess, d, a, b, 0, &mut HashMap::new()) );
-        let m = get_next_move(&mut chess, d, i32::MAX).chess_move.unwrap();
+        let m = get_next_move(&mut chess, d, u128::MAX).chess_move.unwrap();
         println!("Do Move: {}", m);
         chess.do_move(m);
     }

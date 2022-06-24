@@ -45,6 +45,7 @@ static QUEENSIDE_ROOKS: [u64; 2] = [1 << 7, 1 << 63];
 
 // White is on top.
 // The least significant bit is top left. going over the board rows first.
+#[derive(Clone)]
 pub struct BoardState {
     // Array of two players, with an int per piece type.
     piece_state: [[u64; 6]; 2],
@@ -148,6 +149,17 @@ pub struct Chess {
     history: Vec<(Move, u64, u64)>,
     move_tables: Box<MoveTables>,
 }
+//
+// impl Clone for Chess {
+//     fn clone(&self) -> Self {
+//         Chess {
+//             current_player: self.current_player,
+//             board: self.board.clone(),
+//             history: self.history.clone(),
+//             move_tables: Box::new(*self.move_tables),
+//         }
+//     }
+// }
 
 impl Chess {
 
@@ -499,7 +511,7 @@ impl Game for Chess {
 
     fn new() -> Self {
         let mut chess = Chess {
-            current_player: Player::PLAYER1,
+            current_player: PLAYER1,
             board: BoardState {
                 piece_state: [[0; 6]; 2],
                 castle_memory: 0,

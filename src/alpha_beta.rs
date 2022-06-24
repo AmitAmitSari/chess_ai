@@ -56,7 +56,7 @@ pub struct MoveResult {
     pub move_from_depth: i32,
 }
 
-pub fn get_next_move(game: &mut Chess, depth: i32, max_timestamp_ms: i32) -> MoveResult {
+pub fn get_next_move(game: &mut Chess, depth: i32, max_timestamp_ms: u128) -> MoveResult {
 
     let mut killer_move_cache: Caches = HashMap::with_capacity_and_hasher(depth as usize, A {});
     let mut m = None;
@@ -94,15 +94,11 @@ pub fn get_next_move(game: &mut Chess, depth: i32, max_timestamp_ms: i32) -> Mov
 
 #[inline]
 fn move_ordering(m: &Move, killer_move_cache_at_depth: &Cache) -> i32 {
-    -max(*killer_move_cache_at_depth.get(&m.hash()).unwrap_or(&0), ((m.eaten_loc != 0) as i32 * 10))
+    -max(*killer_move_cache_at_depth.get(&m.hash()).unwrap_or(&0), (m.eaten_loc != 0) as i32 * 10)
 }
 
-fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: i32) -> Option<(Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)>
+fn _get_next_move(game: &mut Chess, depth: i32, mut killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: u128) -> Option<(Option<<Chess as Game>::MoveType>, <Chess as Scored>::ScoreType)>
 {
-    if get_time() >= max_timestamp_ms {
-        return None;
-    }
-
     let mut rng = rand::thread_rng();
     let mut best_moves = vec![];
     let mut score;
@@ -192,8 +188,12 @@ pub fn min_max(game: &mut Chess, depth: i32, last_to: u64) -> <Chess as Scored>:
     return score;
 }
 
-pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: i32) -> Option<<Chess as Scored>::ScoreType>
+pub fn alpha_beta(game: &mut Chess, depth: i32, mut a: <Chess as Scored>::ScoreType, mut b: <Chess as Scored>::ScoreType, last_to: u64, killer_move_cache: &mut Caches, call_count: &mut i32, max_timestamp_ms: u128) -> Option<<Chess as Scored>::ScoreType>
 {
+    // if get_time() >= max_timestamp_ms {
+    //     return None;
+    // }
+
     let mut possible_moves = game.possible_moves();
     *call_count += 1;
 
