@@ -1,4 +1,3 @@
-use std::detect::__is_feature_detected::adx;
 use lazy_static::lazy_static;
 use crate::bit_help::{Dir, ray, ray_until_blocker, index_to_place, iter_index, _ray, index, index_to_coord, coord_to_index};
 use crate::two_player_game::Player::{PLAYER1, PLAYER2};
